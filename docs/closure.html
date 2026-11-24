@@ -1,0 +1,681 @@
+<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>P38 closure: Capex AFE Desk</title><style>body{font:16px/1.55 Calibri,Arial,sans-serif;color:#1B2A3A;max-width:900px;margin:2rem auto;padding:0 1rem}h1{font:700 1.7rem Cambria,serif;margin-top:2.5rem;border-top:2px solid #D5DEE8;padding-top:1rem}section:first-of-type h1{border:0}h2{font:700 1.2rem Cambria,serif;margin-top:1.5rem}table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.92rem}th{background:#1F4E79;color:#fff;text-align:left}th,td{border:1px solid #D5DEE8;padding:.35rem .5rem;vertical-align:top}code{background:#F3F5F8;padding:0 .2em}.lead{background:#F3F5F8;border-left:4px solid #C0492F;padding:.8rem 1rem}nav a{margin-right:.8rem}</style></head><body><p class='lead'><b>P38 closure, 2026-11-24.</b> Capex AFE Desk for fictional Teduh Samudera Energy, a Combined Solution: a canvas app and a React code app on Dataverse, one approval flow (finance check, then the limits of authority), Copy jobs both ways between Dataverse and a Lakehouse, notebooks for committed cost and estimate at completion, a gated nightly pipeline and a Direct Lake report. Built in two sessions against a waived budget of 7 to 8. Proved live on 24 Nov: supplement TSE-AFE-26-022 went through both approvals; after one pipeline run started from the DataFactory MCP, TSE-AFE-26-009 reads RM 81.5m approved, EAC 99.95%, and flagged AFEs fell from 4 to 3 in Dataverse, the model and the report. The LOA rule agrees on 18 of 18 amounts in Python, Power Fx and the deployed flow. Findings: every owner-gated step drifted to a second session; six report defects showed only in the service renderer; a queue runner died overnight without a log line. Cost is a floor: three stretches have no usage record. Fictional company, synthetic data.</p><nav><a href='#c1'>C1</a><a href='#c2'>C2</a><a href='#c3'>C3</a><a href='#c5'>C5</a><a href='#c6'>C6</a><a href='#c7'>C7</a><a href='#c8'>C8</a></nav><section id='c1'><h1>C1 - Stage-by-stage post-mortem</h1>
+<p><strong>P38 Capex AFE Desk, closure compiled 2026-11-24 (Cowork, Opus 5.5).</strong> Combined Solution, sample data, portfolio; fictional Teduh Samudera Energy. Two sessions: S1 (23 to 24 Nov) ran Discover, Design, Build and prepared Publish; S2 (24 Nov, about 09:39 to 10:30 MYT) closed the approval loop, ran review test 3, pushed and closed. Times come from the approval and pipeline timestamps and the runner logs. Every figure names its source.</p>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Planned (brief §9)</th>
+<th>Actual</th>
+<th>Hiccup</th>
+<th>Learning</th>
+<th>Pivot</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Discover (G1)</td>
+<td>Brief; probes P1, P2, P3, P5, P6</td>
+<td>P2, P3, P6 PASS; P1 two of three connections (Approvals made in Build); P5 DataFactory sign-in <strong>deferred</strong>; brief accepted</td>
+<td>The deferred sign-in became the reason for a second session</td>
+<td>S2 lesson L22 (below)</td>
+<td>Brief Rev 3</td>
+</tr>
+<tr>
+<td>Design (G2)</td>
+<td>Package, subagent audit</td>
+<td>Every page and screen mocked; second-agent audit: 29 findings, all fixed; owner approved</td>
+<td>none recorded</td>
+<td>—</td>
+<td>Brief Rev 4: supplement = one contingency line; LOA total counts pending supplements; T1 = the asset's manager; tsc_assetbudget added</td>
+</tr>
+<tr>
+<td>Build (G3)</td>
+<td>Data, Dataverse, flow, app, code app, Copy jobs, pipeline, model, report; one AFE end to end</td>
+<td>14 of 14 components; pipeline Completed over REST (7m9s), negative control Failed as designed; solution cross-tenant 0/0</td>
+<td>Dataverse "Status" display-name clash (82 compile errors); per-row seed hit the 3000 s runner timeout; <code>%20e</code> read as a format spec; cp1252 runner crashes; six render-only report defects; cumulative DAX dropped the Year slicer</td>
+<td>L1 to L19 (<code>_sessions/S1_build_lessons.md</code>); guide §231a-h; S288 to S296</td>
+<td>Deviations 1 to 5 in BUILD_RECORD (AFE numbers by the app; detail page by slicer; 110% as a bar; Copy jobs first run in the wizard)</td>
+</tr>
+<tr>
+<td>Publish (G4)</td>
+<td>Record, export, repo, guide, deck, card</td>
+<td>S1: all prepared locally (148-file repo, scrub 0 BLOCK, deck, card). S2: loop proved, docs updated, repo pushed (6f30f0d), Pages on, card 25 live (b24b3c2)</td>
+<td>GitHub Pages API refused by the session proxy; Chrome screenshots timed out with the tab group's window behind another; data.js cached 10 min by Pages</td>
+<td>S2 lessons L20, L21, L23</td>
+<td>Captures kept as "23 Nov, before the loop", labelled in guide and deck; rendered after-values read as page text instead</td>
+</tr>
+<tr>
+<td>Close (G5)</td>
+<td>Skill 10</td>
+<td>C1 to C8, closure page, regenerate-and-diff (identical), lessons, cost row, handover, kickoff, <code>session_close.py</code></td>
+<td>Lane 2 runner had died overnight without a log line</td>
+<td>L24</td>
+<td>Readback queued on lane 1 instead</td>
+</tr>
+</tbody>
+</table>
+<h2>Patterns across stages</h2>
+<ul>
+<li><strong>Every owner-dependent step drifted to the end.</strong> The sign-in (P5), both approvals and the publish yes were all known in Discover and all waited for the finish session. None needed new information; each needed the owner present at a moment the build was not.</li>
+<li><strong>Read-backs caught what success messages did not, again.</strong> The canvas save looked failed and was not (sync proved it); the pipeline "Completed" was only trusted after Dataverse and the model both showed 26-009 at RM 81.5m; the guide's images reported width 0 and were fine (lazy loading), proven by fetching and decoding them.</li>
+<li><strong>Mechanical bugs repeated inside one session.</strong> The format-then-encode bug happened twice (dv_build seed, flow_deploy) before it became lint L6.</li>
+</ul>
+<h2>Counts asserted in this project, enumerated</h2>
+<table>
+<thead>
+<tr>
+<th>Count</th>
+<th>Value</th>
+<th>Basis</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AFEs seeded</td>
+<td>63 (60 originals, 3 supplements; 30 open, 27 closed, 3 rejected)</td>
+<td>brief Rev 4; Dataverse count read back</td>
+</tr>
+<tr>
+<td>Requests in the model after S2</td>
+<td>64 (63 seeded + TSE-AFE-26-022)</td>
+<td>Fabric IQ <code>[Requests]</code> = 64</td>
+</tr>
+<tr>
+<td>AFE families</td>
+<td>57; 30 open</td>
+<td>NB_Gold GOLD_OK; Fabric IQ</td>
+</tr>
+<tr>
+<td>Flagged over 110%</td>
+<td>4 before the loop, 3 after</td>
+<td>Dataverse <code>tsc_supplementneeded</code>; Fabric IQ <code>[AFEs needing a supplement]</code>; report title</td>
+</tr>
+<tr>
+<td>26-009 after the loop</td>
+<td>approved RM 81,500,000; EAC RM 81,455,634.23; 99.95%</td>
+<td>Dataverse tsc_afestatus (refreshed 01:48 UTC); model 'AFE status'</td>
+</tr>
+<tr>
+<td>Decision rows</td>
+<td>132 seeded + 2 live (Finance check, LOA approval on 26-022)</td>
+<td>dv_readback t41</td>
+</tr>
+<tr>
+<td>LOA vectors</td>
+<td>18 of 18 in Python, Power Fx and the deployed flow</td>
+<td><code>test_flow_rule.py</code>; scrRuleTest</td>
+</tr>
+<tr>
+<td>Copy job in</td>
+<td>6 tables, 640 read = 640 written</td>
+<td>wizard run (S1)</td>
+</tr>
+<tr>
+<td>Copy job out</td>
+<td>57 status + 15 budget rows</td>
+<td>wizard run (S1)</td>
+</tr>
+<tr>
+<td>Pipeline runs</td>
+<td>3: REST Completed 7m9s; REST blocked control Failed; MCP Completed 10m57s</td>
+<td>t32, t33; job 33861717</td>
+</tr>
+<tr>
+<td>Model</td>
+<td>14 tables, 17 relationships, 42 measures, 0 not ready</td>
+<td>INFO.MEASURES via Fabric IQ</td>
+</tr>
+<tr>
+<td>Report</td>
+<td>5 pages, 55 visuals; 6 render defects fixed</td>
+<td>BUILD_RECORD item 11</td>
+</tr>
+<tr>
+<td>Regenerate and diff</td>
+<td>model 20 files, report 66 files, 0 differ</td>
+<td>Close, <code>~/p38_regen</code> vs <code>02_Build/estate/fabric</code></td>
+</tr>
+<tr>
+<td>Public repo</td>
+<td>148 files; GUID census 176 classified</td>
+<td><code>build_public_repo.py</code>; <code>scrub_allowlist.txt</code></td>
+</tr>
+<tr>
+<td>Lessons</td>
+<td>L1 to L19 (S1) + L20 to L24 (S2)</td>
+<td><code>_sessions/S1_build_lessons.md</code>; guide §231</td>
+</tr>
+<tr>
+<td>SETTLED rows</td>
+<td>S288 to S296 (S1) + S297 to S300 (S2)</td>
+<td><code>SETTLED.md</code></td>
+</tr>
+</tbody>
+</table></section><section id='c2'><h1>C2 - Plan vs actual</h1>
+<p>Basis: brief §5 (components), §9 (session plan), §10 (exit criteria) and Rev 1 to 6; <code>03_Publish/BUILD_RECORD.md</code> as updated on 24 Nov; the read-backs named there.</p>
+<h2>Components (14 must)</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Component</th>
+<th>Class</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Generator, frozen control totals</td>
+<td>Delivered as specified</td>
+<td>byte-identical on regeneration</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Lakehouse Bronze/Silver/Gold with checks</td>
+<td>Delivered as specified</td>
+<td>GOLD_OK 57 of 57</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Dataverse tables and seed</td>
+<td>Delivered as specified</td>
+<td>8 tables (tsc_assetbudget added at Design)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>LOA rule in three places</td>
+<td>Delivered as specified</td>
+<td>18 of 18</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Approval flow</td>
+<td>Delivered as specified</td>
+<td>live run Succeeded through both steps</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Canvas app</td>
+<td>Delivered differently</td>
+<td>AFE numbers given by the app at submit, not the flow (deviation 1)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Spend screen as a code app</td>
+<td>Delivered as specified</td>
+<td>review test 2</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Copy jobs both ways, run by DataFactory MCP</td>
+<td>Delivered differently</td>
+<td>created and first run in the Fabric wizard (S161 fallback); MCP ran them inside the pipeline and CJ_Status_Out alone</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Pipeline with verdict gates, one full run</td>
+<td>Delivered as specified</td>
+<td>REST and MCP runs Completed; blocked control Failed</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Direct Lake model</td>
+<td>Delivered as specified</td>
+<td>42 measures, 0 not ready</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Report</td>
+<td>Delivered differently</td>
+<td>AFE detail by slicer, not drill-through; 110% as a second bar, not a line (deviations 2, 3)</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Solution export, cross-tenant check, install notes</td>
+<td>Delivered differently</td>
+<td>install rehearsal waived by the owner</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Repo, guide, deck, card, live report link</td>
+<td>Delivered differently</td>
+<td>no public report link (trial tenant); deck kept local, not in the repo</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Theme in report and app</td>
+<td>Delivered as specified</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Added unplanned: <code>dv_readback.py</code> (S2 loop read-back); <code>test_lint_rules_p38.py</code> with two lint rules.</p>
+<h2>Exit criteria (brief §10)</h2>
+<table>
+<thead>
+<tr>
+<th>Criterion</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Every must component built</td>
+<td>Met (5 delivered differently, named above)</td>
+</tr>
+<tr>
+<td>LOA rule agrees on every vector</td>
+<td>Met, 18 of 18</td>
+</tr>
+<tr>
+<td>One AFE submitted, checked, approved, landed, flagged, read back in the app</td>
+<td>Met in S2 with TSE-AFE-26-022 on 26-009: flag cleared, Dataverse row read back (the app reads that row)</td>
+</tr>
+<tr>
+<td>Copy jobs run by DataFactory MCP, landing counted</td>
+<td>Met in S2: pipeline job 33861717 and copy job e75f297c Completed; landing counted by the Dataverse and model read-backs, not by a Lakehouse row count in S2</td>
+</tr>
+<tr>
+<td>Every save, deploy and run read back; INFO.MEASURES after every model deploy</td>
+<td>Met</td>
+</tr>
+<tr>
+<td>Report: validators, render gate, Desktop capture of every page, regenerate and diff</td>
+<td>Partly: validators and the service render gate met; <strong>no Desktop capture</strong> (Direct Lake model lives in the service, judged there); regenerate-and-diff ran at Close, not before Publish (identical)</td>
+</tr>
+<tr>
+<td>Solution cross-tenant exit 0; public tree grepped</td>
+<td>Met</td>
+</tr>
+<tr>
+<td><code>session_close.py</code> v2 with no unnamed cost gap</td>
+<td>Met in S1; S2 below</td>
+</tr>
+</tbody>
+</table>
+<h2>Drift</h2>
+<ul>
+<li><strong>Sessions:</strong> planned 1 (owner waiver of the 7 to 8 budget); actual 2. The second session existed only for owner-gated steps: two approvals, the DataFactory sign-in and the publish yes.</li>
+<li><strong>Brief revisions:</strong> 6 rows; 2 after G2 (Rev 5 approval, Rev 6 status), no scope change after the freeze.</li>
+<li><strong>Avoidable vs discovery.</strong> Avoidable, about two thirds by count: the deferred P5 sign-in, the approval delegation not asked at G1, the per-row seed design, the repeated format bug, the missing regenerate-and-diff before Publish. Discovery, about one third: six render-only defects, the Dataverse display-name clash, Copy job schema import behaviour, the proxy refusing the Pages API. Weighting basis: count of items in C1's hiccup column and S2's log, unweighted by time, because no per-item time is on record.</li>
+</ul></section><section id='c3'><h1>C3 - Comparison against the previous comparable projects (P36 and P37)</h1>
+<p>Basis: <code>claude/P36_publish_and_close_2026-11-23.md</code> and <code>claude/P37_publish_and_close_2026-11-23.md</code> (project docs), P37 <code>04_Close/</code> (read in this session), the 23 Nov engine review, and this project's records. A Combined Solution has no earlier sibling; P36 is the nearest Business App and P37 the nearest Data Platform.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>P36 Credit terms (Business App)</th>
+<th>P37 Grid forecast (Data Platform)</th>
+<th>P38 Capex AFE (Combined)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>App data</td>
+<td>SharePoint lists</td>
+<td>—</td>
+<td>Dataverse (8 tables)</td>
+</tr>
+<tr>
+<td>App</td>
+<td>Canvas</td>
+<td>—</td>
+<td>Canvas + React code app</td>
+</tr>
+<tr>
+<td>Flow</td>
+<td>Approvals, 2 tiers</td>
+<td>—</td>
+<td>Approvals, finance check + 3 LOA tiers</td>
+</tr>
+<tr>
+<td>Rule agreement</td>
+<td>18 of 18 vectors</td>
+<td>—</td>
+<td>18 of 18 vectors</td>
+</tr>
+<tr>
+<td>Fabric</td>
+<td>—</td>
+<td>Eventhouse, Lakehouse, 3 notebooks, pipeline</td>
+<td>Lakehouse, 3 notebooks, pipeline, 2 Copy jobs</td>
+</tr>
+<tr>
+<td>Movement Power Platform &lt;-&gt; Fabric</td>
+<td>—</td>
+<td>—</td>
+<td>Copy jobs both ways</td>
+</tr>
+<tr>
+<td>Report</td>
+<td>—</td>
+<td>Direct Lake, 5 pages, 66 visuals</td>
+<td>Direct Lake, 5 pages, 55 visuals</td>
+</tr>
+<tr>
+<td>Sessions</td>
+<td>1 (budget 4)</td>
+<td>1 (budget 5 to 6)</td>
+<td>2 (budget 7 to 8, waived to 1)</td>
+</tr>
+<tr>
+<td>Cost on record</td>
+<td>floor</td>
+<td>481 requests, 200.3M cache read (floor)</td>
+<td>see C8 (floor)</td>
+</tr>
+</tbody>
+</table>
+<h2>Reused</h2>
+<ul>
+<li>The oracle-in-three-places method and its 18-vector shape (P36).</li>
+<li>The Windows queue runner and job script (P37), now with UTF-8 handling (L10).</li>
+<li>Kit <code>.pa.yaml</code> builders and theme tokens (P36); PBIR primitives and build_public_repo pattern (P35 to P37).</li>
+</ul>
+<h2>What P38 learned that the earlier records do not yet reflect</h2>
+<ul>
+<li><strong>P37's "Not done: DataFactory MCP in a real build" is now closed:</strong> <code>run_pipeline</code>, <code>get_pipeline_run_status</code>, <code>run_copy_job</code>, <code>get_copy_job_run_status</code> worked against a real estate (S297).</li>
+<li><strong>The engine review's "only a real project can close these" list:</strong> code apps closed (review test 2); DataFactory MCP closed (test 3); five stages end to end closed; cost capture with no unnamed gap closed in S1; Claude Design canvas <strong>still open</strong> (owner skipped it).</li>
+<li>P37's lesson "a read-back catches what a success message hides" held a sixth and seventh time (canvas save; guide images reporting width 0).</li>
+<li>P36 found three app defects only in play mode; P38 found six report defects only in the service renderer. Same shape, different surface: the render gate is where defects show, not the validators.</li>
+</ul>
+<h2>Numbers this project can correct</h2>
+<p>None of P36's or P37's published numbers is touched by P38.</p></section><section id='c5'><h1>C5 - What to do better next project</h1>
+<p>Basis: C1, C2, <code>_sessions/S1_build_lessons.md</code> (L1 to L19), the S2 log in guide §231i (L20 to L24), runner logs.</p>
+<h2>What I did wrong</h2>
+<ol>
+<li><strong>Deferred the DataFactory sign-in in Discover (P5)</strong> while the owner was present. It became the single reason review test 3 needed a second session. Brief Rev 3 records the deferral.</li>
+<li><strong>Did not ask at G1 who clicks Approve on test data.</strong> The owner delegated both approvals in one answer at the start of S2; asked at G1, the loop could have closed in S1.</li>
+<li><strong>Designed the seed per row</strong> (GET then POST, about 1,280 calls at 1.6 s): it hit the 3000 s runner timeout (L7). <code>$batch</code> did 256 rows in 4.5 min (L11).</li>
+<li><strong>Made the same format-then-encode bug twice</strong> (<code>dv_build</code>, <code>flow_deploy</code>, L6) before writing the lint.</li>
+<li><strong>Skipped the S255 regenerate-and-diff before Publish</strong>, the second project in a row (P37 too). Run at Close: identical, but the rule is "before".</li>
+<li><strong>Queued work on a runner without checking it was alive</strong> (S2): the lane 2 log had stopped at 02:37 MYT, seven hours earlier, with no exit line (L24).</li>
+</ol>
+<h2>What the owner did that cost time</h2>
+<ul>
+<li><strong>The publish yes and the approvals waited for a new session.</strong> Neither needed new information; both were known at G2. One answer block at G2 ("approve test requests yourself; publish when the loop closes") would have removed the finish session's reason to exist.</li>
+<li><strong>The sign-in was left to "the next session"</strong> (handover S1 owner action 2) instead of being clicked while the Edge prompt was live.</li>
+</ul>
+<h2>What the owner did that was right and I did not</h2>
+<ul>
+<li><strong>Waived the split and kept Build on Opus.</strong> The S2 read shows the conversation summary already reset cost per request (C6); a planned split would have bought the same reset with more handover work.</li>
+<li><strong>Delegated both approvals in one answer</strong> with the recommended option, which is exactly the decision shape the engine asks for.</li>
+</ul>
+<h2>Changes ranked by expected value</h2>
+<table>
+<thead>
+<tr>
+<th>Rank</th>
+<th>Change</th>
+<th>Evidence</th>
+<th>Cost to adopt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Discover ends only when every interactive sign-in a probe needs has PASSED with the owner present; no "deferred" sign-in in a brief</td>
+<td>P5 deferral forced S2</td>
+<td>One line in Skill 0 Discover exit</td>
+</tr>
+<tr>
+<td>2</td>
+<td>G1 question block always asks: "who approves test requests and who says yes to the public push"</td>
+<td>S2's first two answers</td>
+<td>One line in the brief template's open-questions block</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Runner liveness check before queuing: compare the log's last line time to now; restart if older than the last task plus 10 min</td>
+<td>L24</td>
+<td>A 10-line <code>runner_alive.py</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>session_close.py</code> refuses Publish without a regenerate-and-diff record</td>
+<td>P37 and P38 both missed S255 before Publish</td>
+<td>A check in session_close</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>dv_build</code> seeds by <code>$batch</code> by default</td>
+<td>L7, L11</td>
+<td>Done in P38's <code>dv_build.py</code>; promote to the kit</td>
+</tr>
+</tbody>
+</table></section><section id='c6'><h1>C6 - Test one assumption: "a one-session project costs more per request as it grows, so split at a gate"</h1>
+<p>Basis: usage reads in <code>_sessions/_cost/</code> (S1_G1, S1_G2, S1_G3, S2_G5) from the usage skill; P37 C8 for comparison. Cache read per request is the measurable proxy; turns and wall time per request are not available from the usage skill.</p>
+<table>
+<thead>
+<tr>
+<th>Segment</th>
+<th style="text-align: right;">Requests</th>
+<th style="text-align: right;">Cache read</th>
+<th style="text-align: right;">Per request</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S1 A: start to the Design gate (G2 read, cumulative with G1)</td>
+<td style="text-align: right;">142</td>
+<td style="text-align: right;">54,386,820</td>
+<td style="text-align: right;">383,006</td>
+</tr>
+<tr>
+<td>S1 B: after S1's summary, Build and Publish prep (G3)</td>
+<td style="text-align: right;">388</td>
+<td style="text-align: right;">177,559,421</td>
+<td style="text-align: right;">457,627</td>
+</tr>
+<tr>
+<td>S2: after S2's opening summary, to mid-Close (G5)</td>
+<td style="text-align: right;">131</td>
+<td style="text-align: right;">37,341,285</td>
+<td style="text-align: right;">285,048</td>
+</tr>
+<tr>
+<td>P37, three segments (comparison)</td>
+<td style="text-align: right;">481</td>
+<td style="text-align: right;">200,328,551</td>
+<td style="text-align: right;">416,483</td>
+</tr>
+</tbody>
+</table>
+<h2>What the numbers say</h2>
+<ul>
+<li>Per-request cache read rose 19% from S1 A to S1 B, then fell 38% in S2 after the summary. The growth is real; the summary resets it.</li>
+<li>A planned split at G2 would have bought the same reset the automatic summary gave, at the cost of a handover and a kickoff. P38 did not pay for the split and still got the reset.</li>
+<li><strong>The second session was not caused by cost or length at all.</strong> It was caused by owner-gated steps (C5).</li>
+</ul>
+<h2>Confounds</h2>
+<ul>
+<li>S2's work is lighter per call (short reads, browser text, small scripts) than S1 B's (builders, model deploys, long logs). Some of the drop is the work, not the reset.</li>
+<li>The instructions share differs (S1 B 45.6%, S2 75.2%): S2 has fewer large tool results, so the fixed context is a larger part of a smaller total.</li>
+<li>Two unrecorded stretches (C8) are missing from both sides.</li>
+</ul>
+<h2>Conclusion</h2>
+<p>The assumption is half right. Per-request cost grows within a segment (19% here), but the conversation summary resets it, so a gate split adds little for cost. The data does not settle whether the total for the project was lower or higher than a planned two-session run, because no planned-split control exists on the same work. Keep the owner's one-session default; split for owner availability, not for tokens.</p></section><section id='c7'><h1>C7 - Folder disposition</h1>
+<p>Basis: listings of the project folder, <code>_probe/p38_20261124/</code>, <code>_probe/p38_r2/</code>, <code>_probe/p38_finish/</code> and <code>_to_delete/</code>, taken at Close on 24 Nov. <strong>Nothing has been moved or deleted.</strong> The owner's one go-ahead decides every Delete and Stop row.</p>
+<h2>Project folder <code>Projects/38) Capex AFE Desk (Teduh Samudera)/</code></h2>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Class</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>00_Brief/</code></td>
+<td>Keep, deliverable</td>
+<td>Brief Rev 1 to 6, the contract</td>
+</tr>
+<tr>
+<td><code>01_Design/</code></td>
+<td>Keep, deliverable</td>
+<td>Approved Design Package, mockup, NEXT_VERSION</td>
+</tr>
+<tr>
+<td><code>02_Build/</code> (app, app_data, codeapp, data, estate, flows, src)</td>
+<td>Keep, deliverable</td>
+<td>Generators and the estate as deployed; regenerate-and-diff identical</td>
+</tr>
+<tr>
+<td><code>02_Build/codeapp/generated_readback/</code></td>
+<td>Keep, evidence</td>
+<td>What <code>pa</code> generated, read back</td>
+</tr>
+<tr>
+<td><code>03_Publish/</code> (record, README, guide, deck, card, package, captures, allowlist)</td>
+<td>Keep, deliverable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>03_Publish/repo/</code></td>
+<td>Keep, evidence (frozen)</td>
+<td>Equals public commit 6f30f0d; do not edit, rebuild instead</td>
+</tr>
+<tr>
+<td><code>04_Close/S1_G1..G3_usage.json</code></td>
+<td>Delete (move to <code>_to_delete/</code>)</td>
+<td>Copies of <code>_sessions/_cost/</code> files, which the merge reads</td>
+</tr>
+<tr>
+<td><code>04_Close/</code> rest, <code>_sessions/</code></td>
+<td>Keep</td>
+<td>Closure, cost reads, lessons, handovers, kickoff</td>
+</tr>
+</tbody>
+</table>
+<h2>Probe folders</h2>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Class</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>_probe/p38_20261124/</code> (runner, <code>p38_jobs.py</code>, DAX files, logs, results)</td>
+<td>Keep, evidence</td>
+<td>Cited by S288 to S296 and BUILD_RECORD (t32, t33, t40, t41)</td>
+</tr>
+<tr>
+<td><code>_probe/p38_r2/</code></td>
+<td>Keep, evidence</td>
+<td>Lane 2 log: solution export t30 to t34, code app pushes</td>
+</tr>
+<tr>
+<td><code>_probe/p38_finish/p38_repo.tar</code></td>
+<td>Delete</td>
+<td>Transfer archive of <code>03_Publish/repo/</code>, already pushed</td>
+</tr>
+<tr>
+<td><code>_to_delete/P38_empty_scratch_screen1</code></td>
+<td>Delete (owner)</td>
+<td>Empty folder from S1</td>
+</tr>
+</tbody>
+</table>
+<h2>Outside the folder (needs the owner's yes)</h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Class</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fabric workspace <code>TeduhCapex-Dev</code>, Dataverse solution TeduhCapex, both apps, the flow</td>
+<td>Keep</td>
+<td>The built solution the captures and readbacks come from</td>
+</tr>
+<tr>
+<td>Lane 1 runner window (restarted in S2)</td>
+<td>Stopped at Close</td>
+<td>STOP file created; log "STOP file seen; exit" 10:20 MYT (a process this session started, nothing deleted)</td>
+</tr>
+<tr>
+<td>Lane 2 runner</td>
+<td>Already stopped</td>
+<td>Died overnight (L24)</td>
+</tr>
+<tr>
+<td>VM scratch <code>~/p38_regen</code></td>
+<td>Gone with the session</td>
+<td>Not in a connected folder</td>
+</tr>
+<tr>
+<td>A blank Chrome window opened by computer use in S2</td>
+<td>Close</td>
+<td>Opened by <code>open_application</code>; Claude cannot click Chrome</td>
+</tr>
+</tbody>
+</table>
+<p>Post-move checks, after any move: <code>scrub_check.py</code> over <code>04_Close/</code>; <code>validate_pbip.py</code> over <code>02_Build/estate/fabric/</code>.</p></section><section id='c8'><h1>C8 - Cost</h1>
+<p>Basis: four usage-skill reads in <code>_sessions/_cost/</code>, merged by <code>capture_session_cost.py --merge</code> on 24 Nov (output below; S1_G1 superseded by S1_G2, same segment). Turns and active hours are <code>n/a</code>: the usage skill cannot measure them. No money figure: no price list is recorded for this model.</p>
+<table>
+<thead>
+<tr>
+<th>S</th>
+<th>Segment and read</th>
+<th style="text-align: right;">Requests</th>
+<th style="text-align: right;">Cache read</th>
+<th style="text-align: right;">Cache write</th>
+<th style="text-align: right;">Output</th>
+<th style="text-align: right;">Instr %</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>A: start to the Design gate (G2)</td>
+<td style="text-align: right;">142</td>
+<td style="text-align: right;">54,386,820</td>
+<td style="text-align: right;">448,093</td>
+<td style="text-align: right;">158,536</td>
+<td style="text-align: right;">56.8</td>
+</tr>
+<tr>
+<td>1</td>
+<td>B: after the first summary, Build and Publish prep (G3)</td>
+<td style="text-align: right;">388</td>
+<td style="text-align: right;">177,559,421</td>
+<td style="text-align: right;">608,524</td>
+<td style="text-align: right;">184,594</td>
+<td style="text-align: right;">45.6</td>
+</tr>
+<tr>
+<td>2</td>
+<td>C: after S2's opening summary, finish to mid-Close (G5)</td>
+<td style="text-align: right;">131</td>
+<td style="text-align: right;">37,341,285</td>
+<td style="text-align: right;">238,766</td>
+<td style="text-align: right;">48,909</td>
+<td style="text-align: right;">75.2</td>
+</tr>
+<tr>
+<td>On record</td>
+<td></td>
+<td style="text-align: right;">661</td>
+<td style="text-align: right;">269,287,526</td>
+<td style="text-align: right;">1,295,383</td>
+<td style="text-align: right;">392,039</td>
+<td style="text-align: right;"></td>
+</tr>
+</tbody>
+</table>
+<p>Tool calls on record: 727. Browser share: 25% of calls on record, <strong>over the cap</strong>: S1 B 34% (Studio, the portal solution add, the service render gate) and S2 26% (approvals, GitHub, Pages checks). Cache read per request: 407,394 (P37: 416,483).</p>
+<h2>What these figures are not</h2>
+<ul>
+<li><strong>A floor, not a total.</strong> Three stretches have no usage on record, each named: S1 from the G2 read to the first summary (part of Build); S1 from the G3 read to the end (the handover; no work ran); S2 before its opening summary (one reply) and after the G5 read (C5 to C8, lessons, handover, kickoff, <code>session_close.py</code>).</li>
+<li><strong>A tool-shape fix in this Close:</strong> S1_G3 and S2_G5 were saved flat, without the <code>usage</code> wrapper and <code>session</code>/<code>segment</code> keys, and the merge crashed (<code>KeyError: 'cache_write'</code>, after "schema None"). Both were reshaped with every field kept; the merge then ran. Lesson L25.</li>
+<li><code>cache_read_per_turn</code> cannot be filled for usage-skill sessions; C6 uses cache read per request.</li>
+</ul>
+<p>Ledger row appended to <code>_ENGINE/reference/PROJECT_COST_LEDGER.md</code> and marked FLOOR.</p></section><footer><p><small>C4: this page is C1 to C3 and C5 to C8 in one file, generated from the markdown in <code>04_Close/</code> by <code>build_p38_closure.py</code>. No external assets.</small></p></footer></body></html>
