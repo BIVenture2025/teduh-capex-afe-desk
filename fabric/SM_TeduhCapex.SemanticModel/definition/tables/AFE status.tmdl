@@ -1,0 +1,227 @@
+/// Gold status per AFE family: approved, actual, open commitment, EAC, headroom, supplement flag (contract C1-C9).
+table 'AFE status'
+	lineageTag: 61fdd0bd-053c-5257-b140-09e53ce92c99
+
+	/// Approved amount (original plus approved supplements) of open AFEs, at the data cut; not sliced by Year.
+	measure 'Open approved' = CALCULATE ( SUM ( 'AFE status'[approved_rm] ), 'AFE status'[status] = "Approved" )
+		formatString: "RM "#,0
+		displayFolder: Portfolio
+		lineageTag: 944c3f85-fd5f-5bf4-993a-b4a77a0ca189
+
+	/// Lifetime actual plus open purchase orders of open AFEs.
+	measure 'Open committed' = CALCULATE ( SUM ( 'AFE status'[committed_total_rm] ), 'AFE status'[status] = "Approved" )
+		formatString: "RM "#,0
+		displayFolder: Portfolio
+		lineageTag: 9513f4da-fc69-55f9-92d0-86015ed8d651
+
+	/// Estimate at completion of open AFEs, computed in Gold (contract C7).
+	measure 'Open EAC' = CALCULATE ( SUM ( 'AFE status'[eac_rm] ), 'AFE status'[status] = "Approved" )
+		formatString: "RM "#,0
+		displayFolder: Portfolio
+		lineageTag: c18e2337-d664-528c-816a-67ad044c1514
+
+	/// Approved minus actual minus open commitment, open AFEs.
+	measure 'Open headroom' = CALCULATE ( SUM ( 'AFE status'[headroom_rm] ), 'AFE status'[status] = "Approved" )
+		formatString: "RM "#,0
+		displayFolder: Portfolio
+		lineageTag: b02559ad-99d0-5ac2-84c0-6660b9c08453
+
+	/// Number of approved AFEs still spending.
+	measure 'Open AFEs' = COALESCE ( CALCULATE ( COUNTROWS ( 'AFE status' ), 'AFE status'[status] = "Approved" ), 0 )
+		formatString: #,0
+		displayFolder: Portfolio
+		lineageTag: 5d7e0117-385b-5bd0-a533-5ed461e5307d
+
+	/// Open EAC over open approved; blank when nothing is approved.
+	measure 'EAC % of approval' = DIVIDE ( [Open EAC], [Open approved] )
+		formatString: 0%
+		displayFolder: Portfolio
+		lineageTag: f8207307-f05f-5e09-952b-338535d75d77
+
+	/// Open AFEs with EAC more than 110% of approval (contract C9).
+	measure 'AFEs needing a supplement' = COALESCE ( CALCULATE ( COUNTROWS ( 'AFE status' ), 'AFE status'[supplement_needed] = TRUE () ), 0 )
+		formatString: #,0
+		displayFolder: Portfolio
+		lineageTag: 670d3bd2-1a67-5f8c-8080-60076300f4fc
+
+	/// EAC minus approval, summed over flagged AFEs.
+	measure 'Over approval' = SUMX ( FILTER ( 'AFE status', 'AFE status'[supplement_needed] = TRUE () ), 'AFE status'[eac_rm] - 'AFE status'[approved_rm] )
+		formatString: "RM "#,0
+		displayFolder: Portfolio
+		lineageTag: 546ac09c-f6ca-5866-9a54-240172f97dc7
+
+	/// Approved amount of the AFEs in context (detail page).
+	measure Approved = SUM ( 'AFE status'[approved_rm] )
+		formatString: "RM "#,0
+		displayFolder: AFE
+		lineageTag: 857df272-f068-5461-81e9-e03a07b2e043
+
+	/// Lifetime actual of the AFEs in context.
+	measure 'Actual to date' = SUM ( 'AFE status'[actual_rm] )
+		formatString: "RM "#,0
+		displayFolder: AFE
+		lineageTag: 7d13a64e-d02a-5b65-9e6d-aea09b9ef776
+
+	/// Open purchase-order value not yet invoiced.
+	measure 'Open commitment' = SUM ( 'AFE status'[open_commit_rm] )
+		formatString: "RM "#,0
+		displayFolder: AFE
+		lineageTag: ffc4c787-c73b-5500-82b5-95be1251c293
+
+	/// Actual plus open purchase orders.
+	measure Committed = SUM ( 'AFE status'[committed_total_rm] )
+		formatString: "RM "#,0
+		displayFolder: AFE
+		lineageTag: 2365a2e9-df3c-54b2-a7e8-b380a32b919c
+
+	/// Estimate at completion of the AFEs in context.
+	measure EAC = SUM ( 'AFE status'[eac_rm] )
+		formatString: "RM "#,0
+		displayFolder: AFE
+		lineageTag: 07bf5afa-54ed-5b18-931c-1b4881da58ad
+
+	/// Approved minus committed.
+	measure Headroom = SUM ( 'AFE status'[headroom_rm] )
+		formatString: "RM "#,0
+		displayFolder: AFE
+		lineageTag: bcd64d9e-3003-53da-964a-47cf700dd35f
+
+	/// EAC over approved for the AFEs in context.
+	measure 'EAC vs approval' = DIVIDE ( [EAC], [Approved] )
+		formatString: 0%
+		displayFolder: AFE
+		lineageTag: 30b83484-6486-5533-b05e-52d046d7967c
+
+	/// The supplement trigger line.
+	measure 'Trigger 110%' = IF ( NOT ISBLANK ( [Approved] ), 1.1 )
+		formatString: 0%
+		displayFolder: AFE
+		lineageTag: 2e3ab2e8-c717-51c0-bcff-1abace23fae5
+
+	/// Scoreboard title.
+	measure 'Title scoreboard' =
+			VAR y = SELECTEDVALUE ( 'Date'[year], YEAR ( [Data cut] ) )
+			VAR p = [Actual % of budget]
+			RETURN
+				"Capex is at " & FORMAT ( p, "0%" ) & " of the " & y & " budget at " & FORMAT ( [Data cut], "mmm yyyy" )
+		displayFolder: Titles
+		lineageTag: 086af472-14ca-552a-87b9-a6502f8f000d
+
+	/// Scoreboard subtitle.
+	measure 'Subtitle scoreboard' = FORMAT ( [AFEs needing a supplement], "0" ) & " open AFEs are heading more than 10% over approval, RM " & FORMAT ( [Over approval] / 1000000, "#,0.0" ) & "m above it"
+		displayFolder: Titles
+		lineageTag: 0b2f7dc8-9746-58b7-aa40-594a957b39dc
+
+	/// Watchlist title.
+	measure 'Title watchlist' = FORMAT ( [AFEs needing a supplement], "0" ) & " AFEs need a supplementary AFE"
+		displayFolder: Titles
+		lineageTag: 9a09cfbc-be1e-5741-ac8f-a21b7c69ad79
+
+	/// Footer text.
+	measure Disclaimer = "Teduh Samudera Energy is fictional. All figures are synthetic. GL actuals to " & FORMAT ( [Data cut], "mmm yyyy" ) & ". Amounts in RM; cards and charts in millions."
+		displayFolder: Titles
+		lineageTag: 79e6e220-9e4f-5caf-9711-af2fe5b13e4c
+
+	column root_afe_no
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: root_afe_no
+		lineageTag: d3e30c8b-2379-5245-b45b-1bd327da37bc
+
+	column asset_code
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: asset_code
+		lineageTag: 0cde416a-c30a-5de2-8ef8-1b5766b643a2
+
+	column afe_type
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: afe_type
+		lineageTag: 474d1c7c-c7ab-566e-a07e-af643eda51c2
+
+	column status
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: status
+		lineageTag: 654838cb-f790-53a5-9dc7-ce661968cd46
+
+	column approved_rm
+		dataType: double
+		isHidden
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: approved_rm
+		lineageTag: b71fbea6-7554-51f9-92bd-c15c7cb9953a
+
+	column actual_rm
+		dataType: double
+		isHidden
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: actual_rm
+		lineageTag: 4a5fdf4a-86dc-5ae7-be39-b1dd16584e36
+
+	column open_commit_rm
+		dataType: double
+		isHidden
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: open_commit_rm
+		lineageTag: 9cc6d4b9-c1e3-577a-bc51-6963d252a2a2
+
+	column committed_total_rm
+		dataType: double
+		isHidden
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: committed_total_rm
+		lineageTag: b5cfe213-aeaf-5561-8c68-746a283ce4f9
+
+	column award_factor
+		dataType: double
+		isHidden
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: award_factor
+		lineageTag: e0210225-8823-51c7-91ec-51dba19bca15
+
+	column eac_rm
+		dataType: double
+		isHidden
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: eac_rm
+		lineageTag: 538f8c80-c4da-5ee8-ade1-86a90bf24677
+
+	column eac_vs_approved
+		dataType: double
+		isHidden
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: eac_vs_approved
+		lineageTag: 850dbe9c-7ed2-5612-9c6e-dd58ce5e596f
+
+	column headroom_rm
+		dataType: double
+		isHidden
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: headroom_rm
+		lineageTag: b7603379-de98-5039-87b9-e85d2ca18c05
+
+	column supplement_needed
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: supplement_needed
+		lineageTag: 79a937db-64a5-5f67-948f-30e8be03a834
+
+	partition 'AFE status' = entity
+		mode: directLake
+		source
+			entityName: gold_afe_status
+			expressionSource: 'DirectLake - LH_TeduhCapex'

@@ -1,0 +1,44 @@
+/// AFE estimate by cost element (original AFEs).
+table Estimate
+	lineageTag: 6487d78f-beb5-5f93-8fa1-d3e2576c6b25
+
+	/// Original AFE estimate by cost element.
+	measure Estimate = SUM ( Estimate[estimate_rm] )
+		formatString: "RM "#,0
+		displayFolder: AFE
+		lineageTag: 833c4f4d-e503-57ff-9b02-a8a64980dcef
+
+	column afe_no
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: afe_no
+		lineageTag: 01704a45-06ed-54bf-978a-40b2a7ccefc6
+
+	column root_afe_no
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: root_afe_no
+		lineageTag: e256bec0-8ed7-5ba7-955c-2b526c19b615
+
+	column element_code
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: element_code
+		lineageTag: b1cfdb12-cbd2-5cd4-a0a5-dda62004ac47
+
+	column estimate_rm
+		dataType: double
+		isHidden
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: estimate_rm
+		lineageTag: dd52e7c3-d97b-5354-9e49-9b14c4f3a3b4
+
+	partition Estimate = entity
+		mode: directLake
+		source
+			entityName: fact_estimate
+			expressionSource: 'DirectLake - LH_TeduhCapex'

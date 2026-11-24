@@ -1,0 +1,78 @@
+/// One row per original AFE (the family root): asset, type, status, requester, original tier.
+table AFE
+	lineageTag: 798db202-935c-58a7-ab84-136e1d4075b0
+
+	/// AFE detail title.
+	measure 'Title detail' = IF ( HASONEVALUE ( AFE[afe_no] ), SELECTEDVALUE ( AFE[afe_no] ) & ": " & SELECTEDVALUE ( AFE[title] ), "Pick one AFE in the slicer" )
+		displayFolder: Titles
+		lineageTag: 900f82af-6219-55d6-96fe-4321ec4d64c6
+
+	column afe_no
+		dataType: string
+		summarizeBy: none
+		sourceColumn: afe_no
+		lineageTag: 799ef378-f900-5c04-b937-5452d1d5fb85
+
+	column title
+		dataType: string
+		summarizeBy: none
+		sourceColumn: title
+		lineageTag: a0b5246a-9683-5173-9bbf-bb90e8010c64
+
+	column asset_code
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: asset_code
+		lineageTag: 2fcdbbc3-4dce-5f2f-921a-5d182f910566
+
+	column afe_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: afe_type
+		lineageTag: 2b9156ff-a3ee-5e8a-ad6e-d2c84dc4e760
+
+	column status
+		dataType: string
+		summarizeBy: none
+		sourceColumn: status
+		lineageTag: ad8b9cec-9aad-58b5-9ee9-8b26a0c6db81
+
+	column requester
+		dataType: string
+		summarizeBy: none
+		sourceColumn: requester
+		lineageTag: 078d9a4e-84f2-549c-85be-25b23d67bfdc
+
+	column original_tier
+		dataType: string
+		summarizeBy: none
+		sourceColumn: original_tier
+		lineageTag: 3cf12111-6f60-5f78-a028-8d5afbf4b3fc
+
+	column planned_start
+		dataType: dateTime
+		formatString: dd mmm yyyy
+		summarizeBy: none
+		sourceColumn: planned_start
+		lineageTag: f86762b5-8103-57db-8e1d-d75138a8c356
+
+	column planned_end
+		dataType: dateTime
+		formatString: dd mmm yyyy
+		summarizeBy: none
+		sourceColumn: planned_end
+		lineageTag: 583add74-fb1a-5a7a-87b1-67597980215a
+
+	column source
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: source
+		lineageTag: 9a442b33-dd0e-5d15-95f2-1085c15db0b1
+
+	partition AFE = entity
+		mode: directLake
+		source
+			entityName: dim_afe
+			expressionSource: 'DirectLake - LH_TeduhCapex'

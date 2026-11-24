@@ -1,0 +1,57 @@
+/// Capex budget (WP&B) by asset and year, dated 1 January.
+table Budget
+	lineageTag: 387863db-d40f-5422-ac0e-2bb3cfa8b58b
+
+	/// Capex budget (WP&B) of the year in context; the month filter is removed (S277: column-scoped).
+	measure Budget = CALCULATE ( SUM ( Budget[budget_rm] ), REMOVEFILTERS ( 'Date'[month_date], 'Date'[month_label], 'Date'[month_no] ) )
+		formatString: "RM "#,0
+		displayFolder: Spend
+		lineageTag: 2a58b484-fa2c-5805-8786-5b2364e3f09a
+
+	/// Straight-line budget to the month in context.
+	measure 'Budget to date' = [Budget] * MAX ( 'Date'[month_no] ) / 12
+		formatString: "RM "#,0
+		displayFolder: Spend
+		lineageTag: c0e68d0d-093b-5063-bd6c-3a790ce22674
+
+	/// Actual in the period over the year's budget.
+	measure 'Actual % of budget' = DIVIDE ( [Actual], [Budget] )
+		formatString: 0%
+		displayFolder: Spend
+		lineageTag: 8c3a88ba-ed6f-5370-a461-f6ac0ce4a223
+
+	column asset_code
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: asset_code
+		lineageTag: 97f3b407-238e-520b-89f8-d3312bef74e9
+
+	column year
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: year
+		lineageTag: 6db0e981-ad7c-539a-850d-789ea0fdd1bc
+
+	column year_date
+		dataType: dateTime
+		isHidden
+		formatString: dd mmm yyyy
+		summarizeBy: none
+		sourceColumn: year_date
+		lineageTag: b381e12a-1ac0-5b05-bce5-2190ebb9ba5d
+
+	column budget_rm
+		dataType: double
+		isHidden
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: budget_rm
+		lineageTag: 8675ef86-ef40-5da4-b624-f47a944b84aa
+
+	partition Budget = entity
+		mode: directLake
+		source
+			entityName: fact_budget
+			expressionSource: 'DirectLake - LH_TeduhCapex'

@@ -1,0 +1,36 @@
+/// Months from Jan 2024 to Dec 2028.
+table Date
+	lineageTag: 79e9fa4f-4802-59cf-8922-2fb0e095c6db
+
+	column month_date
+		dataType: dateTime
+		formatString: dd mmm yyyy
+		summarizeBy: none
+		sourceColumn: month_date
+		lineageTag: b788b86c-4894-544d-a641-346bb9f379ec
+
+	column year
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: year
+		lineageTag: e82d1c74-cba8-5a9c-b437-7f3195dae7a3
+
+	column month_no
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: month_no
+		lineageTag: 1b2f89bd-5b5c-5a02-b307-3d7b18435524
+
+	column month_label
+		dataType: string
+		summarizeBy: none
+		sourceColumn: month_label
+		sortByColumn: month_date
+		lineageTag: 85e94f24-b69e-5ecd-943f-d62cc0d54ea9
+
+	partition Date = entity
+		mode: directLake
+		source
+			entityName: dim_date
+			expressionSource: 'DirectLake - LH_TeduhCapex'

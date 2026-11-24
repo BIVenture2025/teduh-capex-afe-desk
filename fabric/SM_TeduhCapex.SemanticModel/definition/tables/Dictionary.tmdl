@@ -1,0 +1,27 @@
+/// Every measure with its definition (data dictionary page).
+table Dictionary
+	lineageTag: 5e9b649a-ab0f-5df7-8ab1-2f117c4efe7f
+
+	column measure
+		dataType: string
+		summarizeBy: none
+		sourceColumn: measure
+		lineageTag: 7e6d6630-c94c-5fd5-8d96-b517a8f881a8
+
+	column folder
+		dataType: string
+		summarizeBy: none
+		sourceColumn: folder
+		lineageTag: 2ffb54a3-303e-538a-a4e7-e7501efd6022
+
+	column definition
+		dataType: string
+		summarizeBy: none
+		sourceColumn: definition
+		lineageTag: 66625e54-6aeb-5b75-8676-0dc08f8551aa
+
+	partition Dictionary = entity
+		mode: directLake
+		source
+			entityName: dictionary
+			expressionSource: 'DirectLake - LH_TeduhCapex'

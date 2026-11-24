@@ -1,0 +1,157 @@
+/// One row per approval step of every request (originals and supplements).
+table Decision
+	lineageTag: d8285288-03d7-589d-99c5-13d8e49b3d19
+
+	/// Requests (originals and supplements) with a decision step.
+	measure Requests = COALESCE ( DISTINCTCOUNT ( Decision[afe_no] ), 0 )
+		formatString: #,0
+		displayFolder: Approvals
+		lineageTag: cf3c73d2-576a-53b3-971d-f27c829f2657
+
+	/// Days in the finance check per request; a returned request counts its finance days twice.
+	measure 'Finance days per request' = DIVIDE ( CALCULATE ( SUM ( Decision[days] ), Decision[step] = "Finance check" ), CALCULATE ( DISTINCTCOUNT ( Decision[afe_no] ), Decision[step] = "Finance check" ) )
+		formatString: 0.0
+		displayFolder: Approvals
+		lineageTag: 05872a93-6c16-549d-a5d5-c4feaf340523
+
+	/// Days at the LOA approver per request.
+	measure 'LOA days per request' = DIVIDE ( CALCULATE ( SUM ( Decision[days] ), Decision[step] = "LOA approval" ), CALCULATE ( DISTINCTCOUNT ( Decision[afe_no] ), Decision[step] = "LOA approval" ) )
+		formatString: 0.0
+		displayFolder: Approvals
+		lineageTag: 4b67a485-b565-5c23-ae0e-9fe6ab216786
+
+	/// Mean days from first submit to the LOA decision, decided requests.
+	measure 'Submit to decision' =
+			VAR r = FILTER ( VALUES ( Decision[afe_no] ), CALCULATE ( COUNTROWS ( Decision ), Decision[step] = "LOA approval" ) > 0 )
+			RETURN
+				AVERAGEX ( r, CALCULATE ( DATEDIFF ( MIN ( Decision[submitted_on] ), MAX ( Decision[decided_on] ), DAY ) ) )
+		formatString: 0.0
+		displayFolder: Approvals
+		lineageTag: 02571399-a47d-5a51-9e86-865d41b187df
+
+	/// Median of the same.
+	measure 'Median submit to decision' =
+			VAR r = FILTER ( VALUES ( Decision[afe_no] ), CALCULATE ( COUNTROWS ( Decision ), Decision[step] = "LOA approval" ) > 0 )
+			RETURN
+				MEDIANX ( r, CALCULATE ( DATEDIFF ( MIN ( Decision[submitted_on] ), MAX ( Decision[decided_on] ), DAY ) ) )
+		formatString: 0
+		displayFolder: Approvals
+		lineageTag: a7d03c8d-7d5b-5fe0-a4b4-bd70f852b5fb
+
+	/// Steps where finance returned the request.
+	measure Returned = COALESCE ( CALCULATE ( COUNTROWS ( Decision ), Decision[outcome] = "Returned" ), 0 )
+		formatString: #,0
+		displayFolder: Approvals
+		lineageTag: 39c3ee67-a84c-5916-a507-2af6817e1c48
+
+	/// Requests rejected at the LOA step.
+	measure Rejected = COALESCE ( CALCULATE ( COUNTROWS ( Decision ), Decision[outcome] = "Rejected" ), 0 )
+		formatString: #,0
+		displayFolder: Approvals
+		lineageTag: 49e83b55-891d-5943-bd0e-07122b8ee624
+
+	/// Approvals title.
+	measure 'Title approvals' =
+			VAR t3 = CALCULATE ( [Submit to decision], Decision[request_tier] = "T3" )
+			VAR t1 = CALCULATE ( [Submit to decision], Decision[request_tier] = "T1" )
+			RETURN
+				"CEO-tier requests take " & FORMAT ( t3, "0.0" ) & " days from submit to decision, against " & FORMAT ( t1, "0.0" ) & " at T1"
+		displayFolder: Titles
+		lineageTag: bd4b174c-75b0-51a8-97a9-261f5e67de23
+
+	column afe_no
+		dataType: string
+		summarizeBy: none
+		sourceColumn: afe_no
+		lineageTag: 4394f22c-739b-56db-a01d-312306957206
+
+	column root_afe_no
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: root_afe_no
+		lineageTag: b0c954cb-e176-521e-ad53-7b2af9b06f5c
+
+	column step
+		dataType: string
+		summarizeBy: none
+		sourceColumn: step
+		lineageTag: d138e725-28a6-5148-a363-63380072929c
+
+	column role
+		dataType: string
+		summarizeBy: none
+		sourceColumn: role
+		lineageTag: 831bab54-da11-549a-8592-fb95973d6603
+
+	column approver
+		dataType: string
+		summarizeBy: none
+		sourceColumn: approver
+		lineageTag: 4e744633-1ce1-547a-9a24-54e3ca5dfcf1
+
+	column submitted_on
+		dataType: dateTime
+		formatString: dd mmm yyyy
+		summarizeBy: none
+		sourceColumn: submitted_on
+		lineageTag: e0e745d5-38f7-5ec0-8e83-1168a84b7c07
+
+	column decided_on
+		dataType: dateTime
+		formatString: dd mmm yyyy
+		summarizeBy: none
+		sourceColumn: decided_on
+		lineageTag: 4d32be2f-48af-5bff-8447-67c172166ad3
+
+	column decided_month
+		dataType: dateTime
+		isHidden
+		formatString: dd mmm yyyy
+		summarizeBy: none
+		sourceColumn: decided_month
+		lineageTag: dcac8d03-5e3c-5648-8333-6943fdda74c4
+
+	column outcome
+		dataType: string
+		summarizeBy: none
+		sourceColumn: outcome
+		lineageTag: a50e6ab2-2b44-591e-bba1-74d4e432520c
+
+	column comment
+		dataType: string
+		summarizeBy: none
+		sourceColumn: comment
+		lineageTag: 4c10bdf3-cdee-5c7c-8480-248006418ea2
+
+	column days
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: days
+		lineageTag: 556ea169-af2d-54c8-9e8c-736c409a7c61
+
+	column request_tier
+		dataType: string
+		summarizeBy: none
+		sourceColumn: request_tier
+		lineageTag: 037c84a5-f664-5970-9615-dcf580284926
+
+	column kind
+		dataType: string
+		summarizeBy: none
+		sourceColumn: kind
+		lineageTag: 1556a48a-d2f3-5c13-81b4-991f2be42748
+
+	column asset_code
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: asset_code
+		lineageTag: 0417fa37-bbce-5f5b-b0bf-662f9d8f15f6
+
+	partition Decision = entity
+		mode: directLake
+		source
+			entityName: fact_decision
+			expressionSource: 'DirectLake - LH_TeduhCapex'

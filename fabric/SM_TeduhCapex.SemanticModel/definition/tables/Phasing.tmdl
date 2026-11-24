@@ -1,0 +1,52 @@
+/// Planned phasing by AFE and year, dated 1 January.
+table Phasing
+	lineageTag: de6f0eb0-6de1-5fa0-9ba5-29a39a6339bf
+
+	/// Planned phasing by year.
+	measure Planned = SUM ( Phasing[planned_rm] )
+		formatString: "RM "#,0
+		displayFolder: AFE
+		lineageTag: afdb8a1b-3734-54e8-bf9a-d60afa7a7f97
+
+	column afe_no
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: afe_no
+		lineageTag: df1f66a7-e7a1-53d4-8ae0-6e0d037b33f3
+
+	column root_afe_no
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: root_afe_no
+		lineageTag: eb0685be-532b-5efe-b1f2-44733a84c5c4
+
+	column year
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: year
+		lineageTag: fd895a76-ae9b-5249-8f76-f93ab2c94a54
+
+	column year_date
+		dataType: dateTime
+		isHidden
+		formatString: dd mmm yyyy
+		summarizeBy: none
+		sourceColumn: year_date
+		lineageTag: bb12612f-9e58-5457-96c6-1ae707a72236
+
+	column planned_rm
+		dataType: double
+		isHidden
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: planned_rm
+		lineageTag: 3dbaba90-7ac8-505f-a0df-c1bd11000ea4
+
+	partition Phasing = entity
+		mode: directLake
+		source
+			entityName: fact_phasing
+			expressionSource: 'DirectLake - LH_TeduhCapex'

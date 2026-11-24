@@ -1,0 +1,18 @@
+# Modern theme for Power Apps Studio: Themes > Add a theme > Paste theme.
+# Format: learn.microsoft.com/power-apps/maker/canvas-apps/controls/modern-controls/modern-theming (read 2026-11-10).
+# Overrides pin the brand colour into the Base slot so modern controls match nfColor.Primary.
+Themes:
+  PitchSide Pro:
+    Font: "'Segoe UI', 'Segoe UI', sans-serif"
+    BasePaletteColor: '#1f4e79'
+    HueTorsion: 0
+    Vibrancy: 0
+    ColorOverrides:
+      Lighter30: '#c7d3de'
+      Lighter20: '#9aafc3'
+      Lighter10: '#6283a1'
+      Base: '#1f4e79'
+      Darker10: '#194063'
+      Darker20: '#163755'
+      Darker30: '#112b43'
+      Darker40: '#0c1f30'

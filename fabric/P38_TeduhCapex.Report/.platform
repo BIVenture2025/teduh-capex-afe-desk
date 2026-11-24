@@ -1,0 +1,12 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Report",
+    "displayName": "P38_TeduhCapex",
+    "description": "P38 Capex AFE Desk: scoreboard, watchlist, approvals, AFE detail, guide. Direct Lake on SM_TeduhCapex."
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "38a00000-0000-4000-8000-000000000007"
+  }
+}

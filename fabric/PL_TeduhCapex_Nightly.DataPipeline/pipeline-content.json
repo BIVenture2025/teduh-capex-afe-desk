@@ -1,0 +1,242 @@
+{
+  "properties": {
+    "description": "P38 nightly: Dataverse to lake, ERP extract, Gold, Gold to Dataverse; a verdict gate after each step.",
+    "activities": [
+      {
+        "name": "RunCopyIn",
+        "type": "TridentNotebook",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.02:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": "38a00000-0000-4000-8000-0000000000a3",
+          "workspaceId": "00000000-0000-0000-0000-000000000000",
+          "parameters": {
+            "copy_job": {
+              "value": "CJ_AFE_In",
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "GateCopyIn",
+        "type": "IfCondition",
+        "dependsOn": [
+          {
+            "activity": "RunCopyIn",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "expression": {
+            "type": "Expression",
+            "value": "@and(not(equals(pipeline().parameters.p_block_at, 'CopyIn')), endswith(string(json(activity('RunCopyIn').output.result.exitValue).verdict), '_OK'))"
+          },
+          "ifTrueActivities": [],
+          "ifFalseActivities": [
+            {
+              "name": "FailCopyIn",
+              "type": "Fail",
+              "dependsOn": [],
+              "typeProperties": {
+                "message": {
+                  "type": "Expression",
+                  "value": "@concat('CopyIn blocked: ', substring(string(activity('RunCopyIn').output.result.exitValue), 0, min(400, length(string(activity('RunCopyIn').output.result.exitValue)))))"
+                },
+                "errorCode": "P38_COPYIN_BLOCKED"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "RunERP",
+        "type": "TridentNotebook",
+        "dependsOn": [
+          {
+            "activity": "GateCopyIn",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.02:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": "38a00000-0000-4000-8000-0000000000a1",
+          "workspaceId": "00000000-0000-0000-0000-000000000000"
+        }
+      },
+      {
+        "name": "GateERP",
+        "type": "IfCondition",
+        "dependsOn": [
+          {
+            "activity": "RunERP",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "expression": {
+            "type": "Expression",
+            "value": "@and(not(equals(pipeline().parameters.p_block_at, 'ERP')), endswith(string(json(activity('RunERP').output.result.exitValue).verdict), '_OK'))"
+          },
+          "ifTrueActivities": [],
+          "ifFalseActivities": [
+            {
+              "name": "FailERP",
+              "type": "Fail",
+              "dependsOn": [],
+              "typeProperties": {
+                "message": {
+                  "type": "Expression",
+                  "value": "@concat('ERP blocked: ', substring(string(activity('RunERP').output.result.exitValue), 0, min(400, length(string(activity('RunERP').output.result.exitValue)))))"
+                },
+                "errorCode": "P38_ERP_BLOCKED"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "RunGold",
+        "type": "TridentNotebook",
+        "dependsOn": [
+          {
+            "activity": "GateERP",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.02:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": "38a00000-0000-4000-8000-0000000000a2",
+          "workspaceId": "00000000-0000-0000-0000-000000000000"
+        }
+      },
+      {
+        "name": "GateGold",
+        "type": "IfCondition",
+        "dependsOn": [
+          {
+            "activity": "RunGold",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "expression": {
+            "type": "Expression",
+            "value": "@and(not(equals(pipeline().parameters.p_block_at, 'Gold')), endswith(string(json(activity('RunGold').output.result.exitValue).verdict), '_OK'))"
+          },
+          "ifTrueActivities": [],
+          "ifFalseActivities": [
+            {
+              "name": "FailGold",
+              "type": "Fail",
+              "dependsOn": [],
+              "typeProperties": {
+                "message": {
+                  "type": "Expression",
+                  "value": "@concat('Gold blocked: ', substring(string(activity('RunGold').output.result.exitValue), 0, min(400, length(string(activity('RunGold').output.result.exitValue)))))"
+                },
+                "errorCode": "P38_GOLD_BLOCKED"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "RunCopyOut",
+        "type": "TridentNotebook",
+        "dependsOn": [
+          {
+            "activity": "GateGold",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.02:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": "38a00000-0000-4000-8000-0000000000a3",
+          "workspaceId": "00000000-0000-0000-0000-000000000000",
+          "parameters": {
+            "copy_job": {
+              "value": "CJ_Status_Out",
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "GateCopyOut",
+        "type": "IfCondition",
+        "dependsOn": [
+          {
+            "activity": "RunCopyOut",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "expression": {
+            "type": "Expression",
+            "value": "@and(not(equals(pipeline().parameters.p_block_at, 'CopyOut')), endswith(string(json(activity('RunCopyOut').output.result.exitValue).verdict), '_OK'))"
+          },
+          "ifTrueActivities": [],
+          "ifFalseActivities": [
+            {
+              "name": "FailCopyOut",
+              "type": "Fail",
+              "dependsOn": [],
+              "typeProperties": {
+                "message": {
+                  "type": "Expression",
+                  "value": "@concat('CopyOut blocked: ', substring(string(activity('RunCopyOut').output.result.exitValue), 0, min(400, length(string(activity('RunCopyOut').output.result.exitValue)))))"
+                },
+                "errorCode": "P38_COPYOUT_BLOCKED"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "parameters": {
+      "p_block_at": {
+        "type": "string",
+        "defaultValue": ""
+      }
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+ "seed": 38,
+ "data_cut": "2026-10-31",
+ "afe_rows": 63,
+ "afe_by_status": {
+  "Approved": 33,
+  "Closed": 27,
+  "Rejected": 3
+ },
+ "afe_by_kind": {
+  "Original": 60,
+  "Supplement": 3
+ },
+ "approved_amount_rm": 946620000.0,
+ "afe_line_rows": 314,
+ "estimate_rm": 995380000.0,
+ "decision_rows": 132,
+ "po_rows": 455,
+ "po_value_rm": 678909900.0,
+ "gl_rows": 4718,
+ "gl_amount_rm": 584437639.23,
+ "budget_rows": 15,
+ "budget_rm": 785600000.0
+}

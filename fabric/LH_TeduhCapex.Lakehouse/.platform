@@ -1,0 +1,12 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Lakehouse",
+    "displayName": "LH_TeduhCapex",
+    "description": "P38 capex AFE desk: Bronze (Dataverse copy, ERP extract), Silver, Gold. Fictional, synthetic data."
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "38a00000-0000-4000-8000-000000000001"
+  }
+}

@@ -1,0 +1,67 @@
+relationship 7cd1e9cf-6694-5203-9f25-a9fe5217b911
+	fromColumn: 'AFE status'.root_afe_no
+	toColumn: AFE.afe_no
+
+relationship ba6e663c-2eb0-5883-b661-aa65e4a53c7d
+	fromColumn: GL.root_afe_no
+	toColumn: AFE.afe_no
+
+relationship bbac11bf-5912-5b06-8a77-5645d2a03c12
+	fromColumn: GL.month_date
+	toColumn: Date.month_date
+
+relationship b207c356-5b9b-55a7-9169-62621b04ad39
+	fromColumn: GL.element_code
+	toColumn: 'Cost element'.element_code
+
+relationship 213a1303-625c-5bde-84a9-6e3313b2f87b
+	fromColumn: PO.root_afe_no
+	toColumn: AFE.afe_no
+
+relationship b1bd0e75-b133-55d1-99dd-179b6ca47e17
+	fromColumn: PO.element_code
+	toColumn: 'Cost element'.element_code
+
+relationship ae2a4661-cc91-5ede-9000-9ca6549acafb
+	fromColumn: Estimate.root_afe_no
+	toColumn: AFE.afe_no
+
+relationship ffda1cb9-f03f-5a4f-927d-decc4993d843
+	fromColumn: Estimate.element_code
+	toColumn: 'Cost element'.element_code
+
+relationship 3b2c806f-1fba-5761-b4ca-7ae7e528c3a4
+	fromColumn: Phasing.root_afe_no
+	toColumn: AFE.afe_no
+
+relationship 9eaa6a88-4895-5478-9448-111dd31134f8
+	fromColumn: Phasing.year_date
+	toColumn: Date.month_date
+
+relationship a558bd83-e34e-5895-893f-5bf92a180dba
+	fromColumn: Budget.asset_code
+	toColumn: Asset.asset_code
+
+relationship e121efa4-7816-515b-a71b-27a4063bf0bc
+	fromColumn: Budget.year_date
+	toColumn: Date.month_date
+
+relationship a67a123a-6faa-5372-9646-1ea3e7b5ca46
+	fromColumn: Decision.root_afe_no
+	toColumn: AFE.afe_no
+
+relationship 98b9c507-c648-5fe4-8a4c-8e6f810849e5
+	fromColumn: Decision.request_tier
+	toColumn: Tier.tier
+
+relationship b08301ed-3e5d-5509-b1ea-62bde5cfccfa
+	fromColumn: Decision.decided_month
+	toColumn: Date.month_date
+
+relationship 0231d5be-60c6-558a-bbe5-4b5c8fc5a1c6
+	fromColumn: Waiting.root_afe_no
+	toColumn: AFE.afe_no
+
+relationship eec949dd-0136-5bef-a7e1-2ea5a89eff9b
+	fromColumn: AFE.asset_code
+	toColumn: Asset.asset_code

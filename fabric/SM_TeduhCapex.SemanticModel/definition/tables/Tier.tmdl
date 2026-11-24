@@ -1,0 +1,29 @@
+/// LOA tiers.
+table Tier
+	lineageTag: e44f6794-9d51-52a7-b010-7e7176529d19
+
+	column tier
+		dataType: string
+		summarizeBy: none
+		sourceColumn: tier
+		lineageTag: 0a1c0ed0-9bf1-547b-ac09-e36b0fbbc724
+
+	column approver_role
+		dataType: string
+		summarizeBy: none
+		sourceColumn: approver_role
+		sortByColumn: sort
+		lineageTag: 22308768-6503-5455-b4f5-37740954b0c5
+
+	column sort
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: sort
+		lineageTag: d9513b8e-3448-5578-9472-067c16cd9e0e
+
+	partition Tier = entity
+		mode: directLake
+		source
+			entityName: dim_tier
+			expressionSource: 'DirectLake - LH_TeduhCapex'

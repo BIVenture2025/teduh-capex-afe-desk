@@ -1,0 +1,33 @@
+/// Five assets.
+table Asset
+	lineageTag: 8a276cf6-fd44-562b-bed5-4a665d6ba9d3
+
+	column asset_code
+		dataType: string
+		summarizeBy: none
+		sourceColumn: asset_code
+		lineageTag: f47d6065-6dda-585c-8cc7-724480e852e9
+
+	column asset_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: asset_name
+		lineageTag: 28973ea3-4c87-547c-b73f-7d4670df993f
+
+	column asset_kind
+		dataType: string
+		summarizeBy: none
+		sourceColumn: asset_kind
+		lineageTag: 47740d1b-8ef4-5e90-9090-966447a060e2
+
+	column asset_manager
+		dataType: string
+		summarizeBy: none
+		sourceColumn: asset_manager
+		lineageTag: 38204f3c-a081-5a95-acce-d68b18555bf7
+
+	partition Asset = entity
+		mode: directLake
+		source
+			entityName: dim_asset
+			expressionSource: 'DirectLake - LH_TeduhCapex'

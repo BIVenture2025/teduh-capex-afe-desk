@@ -1,0 +1,91 @@
+/// Purchase orders with invoiced and open amounts.
+table PO
+	lineageTag: a106d3c4-2475-5750-923d-0bb8e257e3e7
+
+	/// Purchase-order value.
+	measure 'PO value' = SUM ( PO[po_value_rm] )
+		formatString: "RM "#,0
+		displayFolder: AFE
+		lineageTag: 38c30e08-a31c-5d02-b91b-1a47045ac822
+
+	/// Invoiced against purchase orders.
+	measure Invoiced = SUM ( PO[invoiced_rm] )
+		formatString: "RM "#,0
+		displayFolder: AFE
+		lineageTag: 9d01393b-6a9d-5617-827b-f5b39d1a833d
+
+	/// Number of purchase orders.
+	measure POs = COALESCE ( COUNTROWS ( PO ), 0 )
+		formatString: #,0
+		displayFolder: AFE
+		lineageTag: d2a91080-d7fd-52bc-8efd-bb1ee497a803
+
+	column po_no
+		dataType: string
+		summarizeBy: none
+		sourceColumn: po_no
+		lineageTag: 9e20b7a0-5191-503c-9b59-5ed6330c8b96
+
+	column afe_no
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: afe_no
+		lineageTag: 9181459b-9ccc-5405-8ffb-fc845ffdeef3
+
+	column root_afe_no
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: root_afe_no
+		lineageTag: f1aa96b1-c0ea-5f82-a988-e756f1a62c27
+
+	column element_code
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: element_code
+		lineageTag: 41c67652-3312-5c29-b915-e93a7e37142c
+
+	column vendor
+		dataType: string
+		summarizeBy: none
+		sourceColumn: vendor
+		lineageTag: 4a094d11-e61e-5ea9-a193-179018dca5e5
+
+	column awarded_on
+		dataType: dateTime
+		formatString: dd mmm yyyy
+		summarizeBy: none
+		sourceColumn: awarded_on
+		lineageTag: b7d2fb97-e8a6-51ce-8021-c0afd0dad750
+
+	column po_value_rm
+		dataType: double
+		isHidden
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: po_value_rm
+		lineageTag: 0f3be253-d674-5451-9be2-48ccfeca1186
+
+	column invoiced_rm
+		dataType: double
+		isHidden
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: invoiced_rm
+		lineageTag: af96f969-3322-5389-8186-c923f151bd6d
+
+	column open_rm
+		dataType: double
+		isHidden
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: open_rm
+		lineageTag: a7b21c9a-0760-5b65-9d24-e7ecc4ea2b8a
+
+	partition PO = entity
+		mode: directLake
+		source
+			entityName: fact_po
+			expressionSource: 'DirectLake - LH_TeduhCapex'

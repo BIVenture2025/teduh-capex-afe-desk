@@ -1,0 +1,5 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {"type": "SemanticModel", "displayName": "SM_TeduhCapex", "description": "P38 Direct Lake model: capex budget, AFEs, commitments, actuals, EAC, approvals."},
+  "config": {"version": "2.0", "logicalId": "38a00000-0000-4000-8000-000000000006"}
+}

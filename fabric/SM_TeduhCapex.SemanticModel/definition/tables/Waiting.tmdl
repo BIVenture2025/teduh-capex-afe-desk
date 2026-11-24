@@ -1,0 +1,78 @@
+/// Requests waiting for a decision and how long.
+table Waiting
+	lineageTag: fd45d6f8-617e-538e-ab03-46d2b8dd808f
+
+	/// Requests in Submitted, Finance check or LOA approval now.
+	measure 'Waiting for a decision' = COALESCE ( COUNTROWS ( Waiting ), 0 )
+		formatString: #,0
+		displayFolder: Approvals
+		lineageTag: 5083c9f1-ac7d-5557-9cd4-f60c4aa7dfac
+
+	/// Days since the request reached its current step.
+	measure 'Days waiting' = MAX ( Waiting[days_waiting] )
+		formatString: 0
+		displayFolder: Approvals
+		lineageTag: 8a388823-cb1f-5e7d-9ac6-ca335d7da09c
+
+	column afe_no
+		dataType: string
+		summarizeBy: none
+		sourceColumn: afe_no
+		lineageTag: de684c62-16fd-52c3-b17a-7f50111e0cf2
+
+	column root_afe_no
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: root_afe_no
+		lineageTag: 8e94cee9-3cd1-547a-9e85-0b78cdab6e68
+
+	column title
+		dataType: string
+		summarizeBy: none
+		sourceColumn: title
+		lineageTag: 6cbbf67d-c8cb-5698-ad52-380e3d2207ed
+
+	column kind
+		dataType: string
+		summarizeBy: none
+		sourceColumn: kind
+		lineageTag: 7e5bda08-4cdb-528f-ae12-8fa3760d63b8
+
+	column asset_code
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: asset_code
+		lineageTag: 1206cf46-a5f2-59fa-b3f9-39f7ed46f8a5
+
+	column amount_rm
+		dataType: double
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: amount_rm
+		lineageTag: 3a2ef2a0-5d44-58d8-9c8f-4d956ab7c65b
+
+	column status
+		dataType: string
+		summarizeBy: none
+		sourceColumn: status
+		lineageTag: aa2cd4d0-9cbf-5fd6-b1d9-2944f688082f
+
+	column with_role
+		dataType: string
+		summarizeBy: none
+		sourceColumn: with_role
+		lineageTag: dd4baede-427e-560c-b3a1-58f62ce3e6aa
+
+	column days_waiting
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: days_waiting
+		lineageTag: fc79ec88-15bc-5f8d-a8bf-19d02909982f
+
+	partition Waiting = entity
+		mode: directLake
+		source
+			entityName: gold_waiting
+			expressionSource: 'DirectLake - LH_TeduhCapex'

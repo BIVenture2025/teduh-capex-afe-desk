@@ -1,0 +1,182 @@
+[
+ {
+  "measure": "Open approved",
+  "folder": "Portfolio",
+  "definition": "Approved amount (original plus approved supplements) of open AFEs, at the data cut; not sliced by Year."
+ },
+ {
+  "measure": "Open committed",
+  "folder": "Portfolio",
+  "definition": "Lifetime actual plus open purchase orders of open AFEs."
+ },
+ {
+  "measure": "Open EAC",
+  "folder": "Portfolio",
+  "definition": "Estimate at completion of open AFEs, computed in Gold (contract C7)."
+ },
+ {
+  "measure": "Open headroom",
+  "folder": "Portfolio",
+  "definition": "Approved minus actual minus open commitment, open AFEs."
+ },
+ {
+  "measure": "Open AFEs",
+  "folder": "Portfolio",
+  "definition": "Number of approved AFEs still spending."
+ },
+ {
+  "measure": "EAC % of approval",
+  "folder": "Portfolio",
+  "definition": "Open EAC over open approved; blank when nothing is approved."
+ },
+ {
+  "measure": "AFEs needing a supplement",
+  "folder": "Portfolio",
+  "definition": "Open AFEs with EAC more than 110% of approval (contract C9)."
+ },
+ {
+  "measure": "Over approval",
+  "folder": "Portfolio",
+  "definition": "EAC minus approval, summed over flagged AFEs."
+ },
+ {
+  "measure": "Approved",
+  "folder": "AFE",
+  "definition": "Approved amount of the AFEs in context (detail page)."
+ },
+ {
+  "measure": "Actual to date",
+  "folder": "AFE",
+  "definition": "Lifetime actual of the AFEs in context."
+ },
+ {
+  "measure": "Open commitment",
+  "folder": "AFE",
+  "definition": "Open purchase-order value not yet invoiced."
+ },
+ {
+  "measure": "Committed",
+  "folder": "AFE",
+  "definition": "Actual plus open purchase orders."
+ },
+ {
+  "measure": "EAC",
+  "folder": "AFE",
+  "definition": "Estimate at completion of the AFEs in context."
+ },
+ {
+  "measure": "Headroom",
+  "folder": "AFE",
+  "definition": "Approved minus committed."
+ },
+ {
+  "measure": "EAC vs approval",
+  "folder": "AFE",
+  "definition": "EAC over approved for the AFEs in context."
+ },
+ {
+  "measure": "Trigger 110%",
+  "folder": "AFE",
+  "definition": "The supplement trigger line."
+ },
+ {
+  "measure": "Actual",
+  "folder": "Spend",
+  "definition": "GL actual in the period in context (follows the Year slicer)."
+ },
+ {
+  "measure": "Data cut",
+  "folder": "Spend",
+  "definition": "Last month with GL actuals."
+ },
+ {
+  "measure": "Cumulative actual",
+  "folder": "Spend",
+  "definition": "Actual from January of the year in context to the month in context; blank after the data cut."
+ },
+ {
+  "measure": "Budget",
+  "folder": "Spend",
+  "definition": "Capex budget (WP&B) of the year in context; the month filter is removed (S277: column-scoped)."
+ },
+ {
+  "measure": "Budget to date",
+  "folder": "Spend",
+  "definition": "Straight-line budget to the month in context."
+ },
+ {
+  "measure": "Actual % of budget",
+  "folder": "Spend",
+  "definition": "Actual in the period over the year's budget."
+ },
+ {
+  "measure": "Estimate",
+  "folder": "AFE",
+  "definition": "Original AFE estimate by cost element."
+ },
+ {
+  "measure": "PO value",
+  "folder": "AFE",
+  "definition": "Purchase-order value."
+ },
+ {
+  "measure": "Invoiced",
+  "folder": "AFE",
+  "definition": "Invoiced against purchase orders."
+ },
+ {
+  "measure": "POs",
+  "folder": "AFE",
+  "definition": "Number of purchase orders."
+ },
+ {
+  "measure": "Planned",
+  "folder": "AFE",
+  "definition": "Planned phasing by year."
+ },
+ {
+  "measure": "Requests",
+  "folder": "Approvals",
+  "definition": "Requests (originals and supplements) with a decision step."
+ },
+ {
+  "measure": "Finance days per request",
+  "folder": "Approvals",
+  "definition": "Days in the finance check per request; a returned request counts its finance days twice."
+ },
+ {
+  "measure": "LOA days per request",
+  "folder": "Approvals",
+  "definition": "Days at the LOA approver per request."
+ },
+ {
+  "measure": "Submit to decision",
+  "folder": "Approvals",
+  "definition": "Mean days from first submit to the LOA decision, decided requests."
+ },
+ {
+  "measure": "Median submit to decision",
+  "folder": "Approvals",
+  "definition": "Median of the same."
+ },
+ {
+  "measure": "Returned",
+  "folder": "Approvals",
+  "definition": "Steps where finance returned the request."
+ },
+ {
+  "measure": "Rejected",
+  "folder": "Approvals",
+  "definition": "Requests rejected at the LOA step."
+ },
+ {
+  "measure": "Waiting for a decision",
+  "folder": "Approvals",
+  "definition": "Requests in Submitted, Finance check or LOA approval now."
+ },
+ {
+  "measure": "Days waiting",
+  "folder": "Approvals",
+  "definition": "Days since the request reached its current step."
+ }
+]

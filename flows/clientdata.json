@@ -1,0 +1,826 @@
+{
+ "properties": {
+  "connectionReferences": {
+   "shared_commondataserviceforapps": {
+    "runtimeSource": "embedded",
+    "connection": {
+     "connectionReferenceLogicalName": "tsc_commondataserviceforapps"
+    },
+    "api": {
+     "name": "shared_commondataserviceforapps"
+    }
+   },
+   "shared_approvals": {
+    "runtimeSource": "embedded",
+    "connection": {
+     "connectionReferenceLogicalName": "tsc_approvals"
+    },
+    "api": {
+     "name": "shared_approvals"
+    }
+   },
+   "shared_office365": {
+    "runtimeSource": "embedded",
+    "connection": {
+     "connectionReferenceLogicalName": "tsc_office365"
+    },
+    "api": {
+     "name": "shared_office365"
+    }
+   }
+  },
+  "definition": {
+   "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+   "contentVersion": "1.0.0.0",
+   "parameters": {
+    "$connections": {
+     "defaultValue": {},
+     "type": "Object"
+    },
+    "$authentication": {
+     "defaultValue": {},
+     "type": "SecureObject"
+    }
+   },
+   "triggers": {
+    "When_an_AFE_is_submitted": {
+     "type": "OpenApiConnectionWebhook",
+     "inputs": {
+      "host": {
+       "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+       "connectionName": "shared_commondataserviceforapps",
+       "operationId": "SubscribeWebhookTrigger"
+      },
+      "parameters": {
+       "subscriptionRequest/message": 4,
+       "subscriptionRequest/entityname": "tsc_afe",
+       "subscriptionRequest/scope": 4,
+       "subscriptionRequest/filteringattributes": "tsc_status",
+       "subscriptionRequest/filterexpression": "tsc_status eq 'Submitted'"
+      },
+      "authentication": "@parameters('$authentication')"
+     }
+    }
+   },
+   "actions": {
+    "Init_approved": {
+     "runAfter": {},
+     "type": "InitializeVariable",
+     "inputs": {
+      "variables": [
+       {
+        "name": "ApprovedSum",
+        "type": "float",
+        "value": 0
+       }
+      ]
+     }
+    },
+    "Init_pending": {
+     "runAfter": {
+      "Init_approved": [
+       "Succeeded"
+      ]
+     },
+     "type": "InitializeVariable",
+     "inputs": {
+      "variables": [
+       {
+        "name": "PendingSum",
+        "type": "float",
+        "value": 0
+       }
+      ]
+     }
+    },
+    "Try": {
+     "runAfter": {
+      "Init_pending": [
+       "Succeeded"
+      ]
+     },
+     "type": "Scope",
+     "actions": {
+      "Family_key": {
+       "runAfter": {},
+       "type": "Compose",
+       "inputs": "@if(equals(triggerOutputs()?['body/tsc_kind'], 'Supplement'), triggerOutputs()?['body/tsc_parentafeno'], triggerOutputs()?['body/tsc_afeno'])"
+      },
+      "Get_original": {
+       "runAfter": {
+        "Family_key": [
+         "Succeeded"
+        ]
+       },
+       "type": "OpenApiConnection",
+       "inputs": {
+        "host": {
+         "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+         "connectionName": "shared_commondataserviceforapps",
+         "operationId": "ListRecords"
+        },
+        "parameters": {
+         "entityName": "tsc_afes",
+         "$filter": "tsc_afeno eq '@{outputs('Family_key')}'",
+         "$top": 1
+        },
+        "authentication": "@parameters('$authentication')"
+       }
+      },
+      "Get_family_approved": {
+       "runAfter": {
+        "Get_original": [
+         "Succeeded"
+        ]
+       },
+       "type": "OpenApiConnection",
+       "inputs": {
+        "host": {
+         "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+         "connectionName": "shared_commondataserviceforapps",
+         "operationId": "ListRecords"
+        },
+        "parameters": {
+         "entityName": "tsc_afes",
+         "$select": "tsc_amount",
+         "$filter": "(tsc_afeno eq '@{outputs('Family_key')}' or tsc_parentafeno eq '@{outputs('Family_key')}') and (tsc_status eq 'Approved' or tsc_status eq 'Closed')"
+        },
+        "authentication": "@parameters('$authentication')"
+       }
+      },
+      "Get_family_pending": {
+       "runAfter": {
+        "Get_family_approved": [
+         "Succeeded"
+        ]
+       },
+       "type": "OpenApiConnection",
+       "inputs": {
+        "host": {
+         "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+         "connectionName": "shared_commondataserviceforapps",
+         "operationId": "ListRecords"
+        },
+        "parameters": {
+         "entityName": "tsc_afes",
+         "$select": "tsc_amount",
+         "$filter": "tsc_parentafeno eq '@{outputs('Family_key')}' and tsc_afeno ne '@{triggerOutputs()?['body/tsc_afeno']}' and (tsc_status eq 'Submitted' or tsc_status eq 'Finance check' or tsc_status eq 'LOA approval')"
+        },
+        "authentication": "@parameters('$authentication')"
+       }
+      },
+      "Sum_approved": {
+       "runAfter": {
+        "Get_family_pending": [
+         "Succeeded"
+        ]
+       },
+       "type": "Foreach",
+       "foreach": "@outputs('Get_family_approved')?['body/value']",
+       "actions": {
+        "Add_approved": {
+         "runAfter": {},
+         "type": "IncrementVariable",
+         "inputs": {
+          "name": "ApprovedSum",
+          "value": "@float(items('Sum_approved')?['tsc_amount'])"
+         }
+        }
+       }
+      },
+      "Sum_pending": {
+       "runAfter": {
+        "Sum_approved": [
+         "Succeeded"
+        ]
+       },
+       "type": "Foreach",
+       "foreach": "@outputs('Get_family_pending')?['body/value']",
+       "actions": {
+        "Add_pending": {
+         "runAfter": {},
+         "type": "IncrementVariable",
+         "inputs": {
+          "name": "PendingSum",
+          "value": "@float(items('Sum_pending')?['tsc_amount'])"
+         }
+        }
+       }
+      },
+      "AFE_total": {
+       "runAfter": {
+        "Sum_pending": [
+         "Succeeded"
+        ]
+       },
+       "type": "Compose",
+       "inputs": "@add(add(variables('ApprovedSum'), variables('PendingSum')), float(triggerOutputs()?['body/tsc_amount']))"
+      },
+      "Tier": {
+       "runAfter": {
+        "AFE_total": [
+         "Succeeded"
+        ]
+       },
+       "type": "Compose",
+       "inputs": "@if(lessOrEquals(outputs('AFE_total'), 5000000), 'T1', if(lessOrEquals(outputs('AFE_total'), 25000000), 'T2', 'T3'))"
+      },
+      "Get_FIN": {
+       "runAfter": {
+        "Tier": [
+         "Succeeded"
+        ]
+       },
+       "type": "OpenApiConnection",
+       "inputs": {
+        "host": {
+         "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+         "connectionName": "shared_commondataserviceforapps",
+         "operationId": "ListRecords"
+        },
+        "parameters": {
+         "entityName": "tsc_loatiers",
+         "$filter": "tsc_tiercode eq 'FIN'",
+         "$top": 1
+        },
+        "authentication": "@parameters('$authentication')"
+       }
+      },
+      "Get_tier_row": {
+       "runAfter": {
+        "Get_FIN": [
+         "Succeeded"
+        ]
+       },
+       "type": "OpenApiConnection",
+       "inputs": {
+        "host": {
+         "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+         "connectionName": "shared_commondataserviceforapps",
+         "operationId": "ListRecords"
+        },
+        "parameters": {
+         "entityName": "tsc_loatiers",
+         "$filter": "tsc_tiercode eq '@{outputs('Tier')}'",
+         "$top": 1
+        },
+        "authentication": "@parameters('$authentication')"
+       }
+      },
+      "Get_asset": {
+       "runAfter": {
+        "Get_tier_row": [
+         "Succeeded"
+        ]
+       },
+       "type": "OpenApiConnection",
+       "inputs": {
+        "host": {
+         "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+         "connectionName": "shared_commondataserviceforapps",
+         "operationId": "ListRecords"
+        },
+        "parameters": {
+         "entityName": "tsc_assets",
+         "$filter": "tsc_assetcode eq '@{triggerOutputs()?['body/tsc_assetcode']}'",
+         "$top": 1
+        },
+        "authentication": "@parameters('$authentication')"
+       }
+      },
+      "Get_budget": {
+       "runAfter": {
+        "Get_asset": [
+         "Succeeded"
+        ]
+       },
+       "type": "OpenApiConnection",
+       "inputs": {
+        "host": {
+         "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+         "connectionName": "shared_commondataserviceforapps",
+         "operationId": "ListRecords"
+        },
+        "parameters": {
+         "entityName": "tsc_assetbudgets",
+         "$filter": "tsc_assetcode eq '@{triggerOutputs()?['body/tsc_assetcode']}' and tsc_year eq @{int(formatDateTime(utcNow(), 'yyyy'))}",
+         "$top": 1
+        },
+        "authentication": "@parameters('$authentication')"
+       }
+      },
+      "Approver2": {
+       "runAfter": {
+        "Get_budget": [
+         "Succeeded"
+        ]
+       },
+       "type": "Compose",
+       "inputs": "@if(equals(outputs('Tier'), 'T1'), first(outputs('Get_asset')?['body/value'])?['tsc_manageremail'], first(outputs('Get_tier_row')?['body/value'])?['tsc_approveremail'])"
+      },
+      "Approver_role": {
+       "runAfter": {
+        "Approver2": [
+         "Succeeded"
+        ]
+       },
+       "type": "Compose",
+       "inputs": "@if(equals(outputs('Tier'), 'T1'), 'Asset manager', first(outputs('Get_tier_row')?['body/value'])?['tsc_approverrole'])"
+      },
+      "Details": {
+       "runAfter": {
+        "Approver_role": [
+         "Succeeded"
+        ]
+       },
+       "type": "Compose",
+       "inputs": "**@{triggerOutputs()?['body/tsc_afeno']}** @{triggerOutputs()?['body/tsc_title']}\n\nAsset: @{triggerOutputs()?['body/tsc_assetcode']} \u00b7 Kind: @{triggerOutputs()?['body/tsc_kind']}\n\nThis request: RM @{formatNumber(float(triggerOutputs()?['body/tsc_amount']), 'N2')} \u00b7 AFE total after it: RM @{formatNumber(outputs('AFE_total'), 'N2')} \u00b7 Tier @{outputs('Tier')}\n\nAsset capex @{formatDateTime(utcNow(), 'yyyy')}: budget RM @{formatNumber(float(coalesce(first(outputs('Get_budget')?['body/value'])?['tsc_budget'], 0)), 'N0')}, actual RM @{formatNumber(float(coalesce(first(outputs('Get_budget')?['body/value'])?['tsc_actual'], 0)), 'N0')}, left RM @{formatNumber(float(coalesce(first(outputs('Get_budget')?['body/value'])?['tsc_left'], 0)), 'N0')}\n\nReason: @{triggerOutputs()?['body/tsc_justification']}\n\nFictional company, synthetic data."
+      },
+      "Refuse_if_original_closed": {
+       "runAfter": {
+        "Details": [
+         "Succeeded"
+        ]
+       },
+       "type": "If",
+       "expression": {
+        "and": [
+         {
+          "equals": [
+           "@triggerOutputs()?['body/tsc_kind']",
+           "Supplement"
+          ]
+         },
+         {
+          "or": [
+           {
+            "equals": [
+             "@first(outputs('Get_original')?['body/value'])?['tsc_status']",
+             "Closed"
+            ]
+           },
+           {
+            "equals": [
+             "@first(outputs('Get_original')?['body/value'])?['tsc_status']",
+             "Rejected"
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       "actions": {
+        "Refuse": {
+         "runAfter": {},
+         "type": "OpenApiConnection",
+         "inputs": {
+          "host": {
+           "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+           "connectionName": "shared_commondataserviceforapps",
+           "operationId": "UpdateRecord"
+          },
+          "parameters": {
+           "entityName": "tsc_afes",
+           "recordId": "@triggerOutputs()?['body/tsc_afeid']",
+           "item/tsc_status": "Rejected",
+           "item/tsc_decidedon": "@{formatDateTime(utcNow(), 'yyyy-MM-dd')}",
+           "item/tsc_lastcomment": "Refused: the original AFE is @{first(outputs('Get_original')?['body/value'])?['tsc_status']}."
+          },
+          "authentication": "@parameters('$authentication')"
+         }
+        },
+        "Mail_refused": {
+         "runAfter": {
+          "Refuse": [
+           "Succeeded"
+          ]
+         },
+         "type": "OpenApiConnection",
+         "inputs": {
+          "host": {
+           "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+           "connectionName": "shared_office365",
+           "operationId": "SendEmailV2"
+          },
+          "parameters": {
+           "emailMessage/To": "@triggerOutputs()?['body/tsc_requesteremail']",
+           "emailMessage/Subject": "Supplement @{triggerOutputs()?['body/tsc_afeno']} refused",
+           "emailMessage/Body": "<p>A supplement cannot be raised on an original that is Closed or Rejected.</p>",
+           "emailMessage/Importance": "Normal"
+          },
+          "authentication": "@parameters('$authentication')"
+         }
+        },
+        "Stop_refused": {
+         "runAfter": {
+          "Mail_refused": [
+           "Succeeded"
+          ]
+         },
+         "type": "Terminate",
+         "inputs": {
+          "runStatus": "Succeeded"
+         }
+        }
+       },
+       "else": {
+        "actions": {}
+       }
+      },
+      "Set_finance_check": {
+       "runAfter": {
+        "Refuse_if_original_closed": [
+         "Succeeded"
+        ]
+       },
+       "type": "OpenApiConnection",
+       "inputs": {
+        "host": {
+         "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+         "connectionName": "shared_commondataserviceforapps",
+         "operationId": "UpdateRecord"
+        },
+        "parameters": {
+         "entityName": "tsc_afes",
+         "recordId": "@triggerOutputs()?['body/tsc_afeid']",
+         "item/tsc_status": "Finance check",
+         "item/tsc_loatier": "@{outputs('Tier')}"
+        },
+        "authentication": "@parameters('$authentication')"
+       }
+      },
+      "Approval_Finance": {
+       "runAfter": {
+        "Set_finance_check": [
+         "Succeeded"
+        ]
+       },
+       "type": "OpenApiConnectionWebhook",
+       "inputs": {
+        "host": {
+         "apiId": "/providers/Microsoft.PowerApps/apis/shared_approvals",
+         "connectionName": "shared_approvals",
+         "operationId": "StartAndWaitForAnApproval"
+        },
+        "parameters": {
+         "approvalType": "Basic",
+         "WebhookApprovalCreationInput/title": "Finance check: @{triggerOutputs()?['body/tsc_afeno']} @{triggerOutputs()?['body/tsc_title']}",
+         "WebhookApprovalCreationInput/assignedTo": "@{first(outputs('Get_FIN')?['body/value'])?['tsc_approveremail']}",
+         "WebhookApprovalCreationInput/details": "@{outputs('Details')}"
+        },
+        "authentication": "@parameters('$authentication')"
+       }
+      },
+      "Finance_decided_on": {
+       "runAfter": {
+        "Approval_Finance": [
+         "Succeeded"
+        ]
+       },
+       "type": "Compose",
+       "inputs": "@{formatDateTime(utcNow(), 'yyyy-MM-dd')}"
+      },
+      "Finance_passed": {
+       "runAfter": {
+        "Finance_decided_on": [
+         "Succeeded"
+        ]
+       },
+       "type": "If",
+       "expression": {
+        "equals": [
+         "@outputs('Approval_Finance')?['body/outcome']",
+         "Approve"
+        ]
+       },
+       "actions": {
+        "Log_finance_passed": {
+         "runAfter": {},
+         "type": "OpenApiConnection",
+         "inputs": {
+          "host": {
+           "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+           "connectionName": "shared_commondataserviceforapps",
+           "operationId": "CreateRecord"
+          },
+          "parameters": {
+           "entityName": "tsc_afedecisions",
+           "item/tsc_name": "@{triggerOutputs()?['body/tsc_afeno']} Finance check @{ticks(utcNow())}",
+           "item/tsc_afeno": "@triggerOutputs()?['body/tsc_afeno']",
+           "item/tsc_step": "Finance check",
+           "item/tsc_role": "Finance controller",
+           "item/tsc_approveremail": "@{first(outputs('Get_FIN')?['body/value'])?['tsc_approveremail']}",
+           "item/tsc_submittedon": "@{triggerOutputs()?['body/tsc_submittedon']}",
+           "item/tsc_decidedon": "@{formatDateTime(utcNow(), 'yyyy-MM-dd')}",
+           "item/tsc_outcome": "Passed",
+           "item/tsc_comment": "@{coalesce(first(outputs('Approval_Finance')?['body/responses'])?['comments'], '')}"
+          },
+          "authentication": "@parameters('$authentication')"
+         }
+        },
+        "Set_loa": {
+         "runAfter": {
+          "Log_finance_passed": [
+           "Succeeded"
+          ]
+         },
+         "type": "OpenApiConnection",
+         "inputs": {
+          "host": {
+           "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+           "connectionName": "shared_commondataserviceforapps",
+           "operationId": "UpdateRecord"
+          },
+          "parameters": {
+           "entityName": "tsc_afes",
+           "recordId": "@triggerOutputs()?['body/tsc_afeid']",
+           "item/tsc_status": "LOA approval"
+          },
+          "authentication": "@parameters('$authentication')"
+         }
+        },
+        "Approval_LOA": {
+         "runAfter": {
+          "Set_loa": [
+           "Succeeded"
+          ]
+         },
+         "type": "OpenApiConnectionWebhook",
+         "inputs": {
+          "host": {
+           "apiId": "/providers/Microsoft.PowerApps/apis/shared_approvals",
+           "connectionName": "shared_approvals",
+           "operationId": "StartAndWaitForAnApproval"
+          },
+          "parameters": {
+           "approvalType": "Basic",
+           "WebhookApprovalCreationInput/title": "Approve (@{outputs('Tier')}): @{triggerOutputs()?['body/tsc_afeno']} @{triggerOutputs()?['body/tsc_title']}",
+           "WebhookApprovalCreationInput/assignedTo": "@{outputs('Approver2')}",
+           "WebhookApprovalCreationInput/details": "@{outputs('Details')}\n\nFinance check: passed."
+          },
+          "authentication": "@parameters('$authentication')"
+         }
+        },
+        "LOA_approved": {
+         "runAfter": {
+          "Approval_LOA": [
+           "Succeeded"
+          ]
+         },
+         "type": "If",
+         "expression": {
+          "equals": [
+           "@outputs('Approval_LOA')?['body/outcome']",
+           "Approve"
+          ]
+         },
+         "actions": {
+          "Log_approved": {
+           "runAfter": {},
+           "type": "OpenApiConnection",
+           "inputs": {
+            "host": {
+             "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+             "connectionName": "shared_commondataserviceforapps",
+             "operationId": "CreateRecord"
+            },
+            "parameters": {
+             "entityName": "tsc_afedecisions",
+             "item/tsc_name": "@{triggerOutputs()?['body/tsc_afeno']} LOA approval @{ticks(utcNow())}",
+             "item/tsc_afeno": "@triggerOutputs()?['body/tsc_afeno']",
+             "item/tsc_step": "LOA approval",
+             "item/tsc_role": "@{outputs('Approver_role')}",
+             "item/tsc_approveremail": "@{outputs('Approver2')}",
+             "item/tsc_submittedon": "@{outputs('Finance_decided_on')}",
+             "item/tsc_decidedon": "@{formatDateTime(utcNow(), 'yyyy-MM-dd')}",
+             "item/tsc_outcome": "Approved",
+             "item/tsc_comment": "@{coalesce(first(outputs('Approval_LOA')?['body/responses'])?['comments'], '')}"
+            },
+            "authentication": "@parameters('$authentication')"
+           }
+          },
+          "Set_approved": {
+           "runAfter": {
+            "Log_approved": [
+             "Succeeded"
+            ]
+           },
+           "type": "OpenApiConnection",
+           "inputs": {
+            "host": {
+             "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+             "connectionName": "shared_commondataserviceforapps",
+             "operationId": "UpdateRecord"
+            },
+            "parameters": {
+             "entityName": "tsc_afes",
+             "recordId": "@triggerOutputs()?['body/tsc_afeid']",
+             "item/tsc_status": "Approved",
+             "item/tsc_decidedon": "@{formatDateTime(utcNow(), 'yyyy-MM-dd')}",
+             "item/tsc_lastcomment": "@{coalesce(first(outputs('Approval_LOA')?['body/responses'])?['comments'], '')}"
+            },
+            "authentication": "@parameters('$authentication')"
+           }
+          },
+          "Mail_approved": {
+           "runAfter": {
+            "Set_approved": [
+             "Succeeded"
+            ]
+           },
+           "type": "OpenApiConnection",
+           "inputs": {
+            "host": {
+             "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+             "connectionName": "shared_office365",
+             "operationId": "SendEmailV2"
+            },
+            "parameters": {
+             "emailMessage/To": "@triggerOutputs()?['body/tsc_requesteremail']",
+             "emailMessage/Subject": "AFE @{triggerOutputs()?['body/tsc_afeno']} approved",
+             "emailMessage/Body": "<p>@{triggerOutputs()?['body/tsc_afeno']} (@{triggerOutputs()?['body/tsc_title']}) was approved by the @{outputs('Approver_role')}.</p><p>@{coalesce(first(outputs('Approval_LOA')?['body/responses'])?['comments'], '')}</p>",
+             "emailMessage/Importance": "Normal"
+            },
+            "authentication": "@parameters('$authentication')"
+           }
+          }
+         },
+         "else": {
+          "actions": {
+           "Log_rejected": {
+            "runAfter": {},
+            "type": "OpenApiConnection",
+            "inputs": {
+             "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "CreateRecord"
+             },
+             "parameters": {
+              "entityName": "tsc_afedecisions",
+              "item/tsc_name": "@{triggerOutputs()?['body/tsc_afeno']} LOA approval @{ticks(utcNow())}",
+              "item/tsc_afeno": "@triggerOutputs()?['body/tsc_afeno']",
+              "item/tsc_step": "LOA approval",
+              "item/tsc_role": "@{outputs('Approver_role')}",
+              "item/tsc_approveremail": "@{outputs('Approver2')}",
+              "item/tsc_submittedon": "@{outputs('Finance_decided_on')}",
+              "item/tsc_decidedon": "@{formatDateTime(utcNow(), 'yyyy-MM-dd')}",
+              "item/tsc_outcome": "Rejected",
+              "item/tsc_comment": "@{coalesce(first(outputs('Approval_LOA')?['body/responses'])?['comments'], '')}"
+             },
+             "authentication": "@parameters('$authentication')"
+            }
+           },
+           "Set_rejected": {
+            "runAfter": {
+             "Log_rejected": [
+              "Succeeded"
+             ]
+            },
+            "type": "OpenApiConnection",
+            "inputs": {
+             "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "UpdateRecord"
+             },
+             "parameters": {
+              "entityName": "tsc_afes",
+              "recordId": "@triggerOutputs()?['body/tsc_afeid']",
+              "item/tsc_status": "Rejected",
+              "item/tsc_decidedon": "@{formatDateTime(utcNow(), 'yyyy-MM-dd')}",
+              "item/tsc_lastcomment": "@{coalesce(first(outputs('Approval_LOA')?['body/responses'])?['comments'], '')}"
+             },
+             "authentication": "@parameters('$authentication')"
+            }
+           },
+           "Mail_rejected": {
+            "runAfter": {
+             "Set_rejected": [
+              "Succeeded"
+             ]
+            },
+            "type": "OpenApiConnection",
+            "inputs": {
+             "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+              "connectionName": "shared_office365",
+              "operationId": "SendEmailV2"
+             },
+             "parameters": {
+              "emailMessage/To": "@triggerOutputs()?['body/tsc_requesteremail']",
+              "emailMessage/Subject": "AFE @{triggerOutputs()?['body/tsc_afeno']} rejected",
+              "emailMessage/Body": "<p>@{triggerOutputs()?['body/tsc_afeno']} was rejected by the @{outputs('Approver_role')}.</p><p>@{coalesce(first(outputs('Approval_LOA')?['body/responses'])?['comments'], '')}</p>",
+              "emailMessage/Importance": "Normal"
+             },
+             "authentication": "@parameters('$authentication')"
+            }
+           }
+          }
+         }
+        }
+       },
+       "else": {
+        "actions": {
+         "Log_returned": {
+          "runAfter": {},
+          "type": "OpenApiConnection",
+          "inputs": {
+           "host": {
+            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+            "connectionName": "shared_commondataserviceforapps",
+            "operationId": "CreateRecord"
+           },
+           "parameters": {
+            "entityName": "tsc_afedecisions",
+            "item/tsc_name": "@{triggerOutputs()?['body/tsc_afeno']} Finance check @{ticks(utcNow())}",
+            "item/tsc_afeno": "@triggerOutputs()?['body/tsc_afeno']",
+            "item/tsc_step": "Finance check",
+            "item/tsc_role": "Finance controller",
+            "item/tsc_approveremail": "@{first(outputs('Get_FIN')?['body/value'])?['tsc_approveremail']}",
+            "item/tsc_submittedon": "@{triggerOutputs()?['body/tsc_submittedon']}",
+            "item/tsc_decidedon": "@{formatDateTime(utcNow(), 'yyyy-MM-dd')}",
+            "item/tsc_outcome": "Returned",
+            "item/tsc_comment": "@{coalesce(first(outputs('Approval_Finance')?['body/responses'])?['comments'], '')}"
+           },
+           "authentication": "@parameters('$authentication')"
+          }
+         },
+         "Set_returned": {
+          "runAfter": {
+           "Log_returned": [
+            "Succeeded"
+           ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+           "host": {
+            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+            "connectionName": "shared_commondataserviceforapps",
+            "operationId": "UpdateRecord"
+           },
+           "parameters": {
+            "entityName": "tsc_afes",
+            "recordId": "@triggerOutputs()?['body/tsc_afeid']",
+            "item/tsc_status": "Returned",
+            "item/tsc_lastcomment": "@{coalesce(first(outputs('Approval_Finance')?['body/responses'])?['comments'], '')}"
+           },
+           "authentication": "@parameters('$authentication')"
+          }
+         },
+         "Mail_returned": {
+          "runAfter": {
+           "Set_returned": [
+            "Succeeded"
+           ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+           "host": {
+            "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+            "connectionName": "shared_office365",
+            "operationId": "SendEmailV2"
+           },
+           "parameters": {
+            "emailMessage/To": "@triggerOutputs()?['body/tsc_requesteremail']",
+            "emailMessage/Subject": "AFE @{triggerOutputs()?['body/tsc_afeno']} returned by finance",
+            "emailMessage/Body": "<p>Finance returned @{triggerOutputs()?['body/tsc_afeno']}. Edit it in the app and submit again.</p><p>@{coalesce(first(outputs('Approval_Finance')?['body/responses'])?['comments'], '')}</p>",
+            "emailMessage/Importance": "Normal"
+           },
+           "authentication": "@parameters('$authentication')"
+          }
+         }
+        }
+       }
+      }
+     }
+    },
+    "Needs_attention": {
+     "runAfter": {
+      "Try": [
+       "Failed",
+       "TimedOut"
+      ]
+     },
+     "type": "OpenApiConnection",
+     "inputs": {
+      "host": {
+       "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+       "connectionName": "shared_commondataserviceforapps",
+       "operationId": "UpdateRecord"
+      },
+      "parameters": {
+       "entityName": "tsc_afes",
+       "recordId": "@triggerOutputs()?['body/tsc_afeid']",
+       "item/tsc_status": "Needs attention",
+       "item/tsc_lastcomment": "The approval flow failed; see its run history."
+      },
+      "authentication": "@parameters('$authentication')"
+     }
+    }
+   },
+   "outputs": {}
+  }
+ },
+ "schemaVersion": "1.0.0.0"
+}

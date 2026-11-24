@@ -1,0 +1,29 @@
+/// Seven cost elements.
+table 'Cost element'
+	lineageTag: 877e13e1-ba8a-5930-aac9-3fba78253b28
+
+	column element_code
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: element_code
+		lineageTag: e66ace75-aeb8-53f8-90c1-8b191450ebf9
+
+	column element_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: element_name
+		lineageTag: 327fad80-3db4-523a-82de-f3e83ef30ea7
+
+	column procured_by_po
+		dataType: boolean
+		isHidden
+		summarizeBy: none
+		sourceColumn: procured_by_po
+		lineageTag: 40e7d135-8c1e-5ceb-94a4-9fa1621837fc
+
+	partition 'Cost element' = entity
+		mode: directLake
+		source
+			entityName: dim_cost_element
+			expressionSource: 'DirectLake - LH_TeduhCapex'

@@ -1,0 +1,74 @@
+/// GL actuals by AFE, cost element and month (ERP extract).
+table GL
+	lineageTag: 7fa434b8-1d4c-5d7f-b189-3e9e0cd505ab
+
+	/// GL actual in the period in context (follows the Year slicer).
+	measure Actual = SUM ( GL[amount_rm] )
+		formatString: "RM "#,0
+		displayFolder: Spend
+		lineageTag: a298906e-7194-5f1f-9be6-a035664355ce
+
+	/// Last month with GL actuals.
+	measure 'Data cut' = CALCULATE ( MAX ( GL[month_date] ), REMOVEFILTERS () )
+		formatString: mmm yyyy
+		displayFolder: Spend
+		lineageTag: 0c472e7c-324c-5dc8-88f1-e625786b8c59
+
+	/// Actual from January of the year in context to the month in context; blank after the data cut.
+	measure 'Cumulative actual' =
+			VAR mx = MAX ( 'Date'[month_date] )
+			RETURN
+				IF ( mx <= [Data cut], CALCULATE ( [Actual], DATESBETWEEN ( 'Date'[month_date], DATE ( YEAR ( mx ), 1, 1 ), mx ) ) )
+		formatString: "RM "#,0
+		displayFolder: Spend
+		lineageTag: 6438846f-2282-5b8f-8b69-aa7d4281dff4
+
+	column afe_no
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: afe_no
+		lineageTag: 6294fc04-a420-5f60-8375-dd857f1a2c77
+
+	column root_afe_no
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: root_afe_no
+		lineageTag: 173b9e40-9179-5f0a-8517-5695641f0cab
+
+	column element_code
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: element_code
+		lineageTag: 255cb00f-c208-5d7a-a05c-fe76112fd3d6
+
+	column po_no
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: po_no
+		lineageTag: a008ae76-d07f-5a7b-a843-a8613b87b6e4
+
+	column month_date
+		dataType: dateTime
+		isHidden
+		formatString: dd mmm yyyy
+		summarizeBy: none
+		sourceColumn: month_date
+		lineageTag: 32ce3496-32f2-5455-b4ef-9323cef587a9
+
+	column amount_rm
+		dataType: double
+		isHidden
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: amount_rm
+		lineageTag: 1d713b75-0436-5c02-931c-d695f4a8af07
+
+	partition GL = entity
+		mode: directLake
+		source
+			entityName: fact_gl
+			expressionSource: 'DirectLake - LH_TeduhCapex'
